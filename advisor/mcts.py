@@ -1,132 +1,91 @@
-"""蒙特卡洛树搜索（MCTS, UCT 变体）决策核心。
-
-树中的每个节点对应一个"决策点状态"：
-- 打一张牌 -> 打牌后的新状态（同一玩家回合内继续决策）
-- 结束回合 -> 敌人回合结算后的下一个玩家回合状态
-
-搜索结束，按平均收益（或访问次数）为根节点的每个候选动作打分，
-供 CLI 展示推荐排序。
-"""
-
+"""蒙特卡洛树搜索（UCT）。"""
 from __future__ import annotations
-
 import math
 import random
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional
-
-from .model import Action, CombatState
-from .simulator import apply_action, enemy_turn, is_terminal, legal_actions, rollout, terminal_score
-from .policy import DefaultPolicy, greedy_policy
+from typing import Optional
+from .model import CombatState, Action
+from .simulator import legal_actions, apply_action, rollout, is_terminal
 
 
-@dataclass
 class MCTSNode:
-    state: CombatState
-    parent: Optional["MCTSNode"] = None
-    action: Optional[Action] = None
-    children: Dict[Action, "MCTSNode"] = field(default_factory=dict)
-    untried: List[Action] = field(default_factory=list)
-    visits: int = 0
-    value: float = 0.0  # 累计收益（rollout 值之和）
+    __slots__ = ("state", "parent", "action", "children", "visits", "value",
+                 "untried", "terminal")
 
-    def is_fully_expanded(self) -> bool:
-        return not self.untried
-
-    def best_child(self, c: float, rng: random.Random) -> "MCTSNode":
-        """UCT 选择：取 UCB1 最大的子节点。"""
-        best, best_val = None, -math.inf
-        for child in self.children.values():
-            if child.visits == 0:
-                ucb = math.inf
-            else:
-                exploitation = child.value / child.visits
-                exploration = c * math.sqrt(math.log(self.visits + 1) / child.visits)
-                ucb = exploitation + exploration
-            if ucb > best_val:
-                best, best_val = child, ucb
-        return best
+    def __init__(self, state: CombatState, parent=None, action=None):
+        self.state = state
+        self.parent = parent
+        self.action = action
+        self.children: list["MCTSNode"] = []
+        self.visits = 0
+        self.value = 0.0
+        self.untried = legal_actions(state, prune=True)
+        self.terminal = is_terminal(state)
 
 
 class MCTS:
-    def __init__(
-        self,
-        default_policy: DefaultPolicy = greedy_policy,
-        exploration_c: float = 1.4,
-        seed: int = 0,
-        memory=None,
-    ):
+    def __init__(self, c: float = 1.4, default_policy=None, seed: Optional[int] = None):
+        self.c = c
         self.default_policy = default_policy
-        self.c = exploration_c
         self.rng = random.Random(seed)
-        self.memory = memory  # DrawOrderMemory：让推演按真实牌序确定性抽牌
 
-    # -- 搜索主流程 --------------------------------------------------------
-    def search(self, root_state: CombatState, iterations: int = 500) -> MCTSNode:
-        """从根状态执行 iterations 次模拟，返回根节点（含各子动作统计）。"""
-        root = MCTSNode(state=root_state)
-        self._expand(root)
-        for _ in range(iterations):
-            node = root
-            # 1) 选择：沿已展开路径下行到叶子
-            while node.is_fully_expanded() and not is_terminal(node.state):
-                node = node.best_child(self.c, self.rng)
-            # 2) 展开 + 模拟
-            if not is_terminal(node.state):
-                node = self._expand_one(node)
-                leaf = node
-            else:
-                leaf = node
-            value = self._simulate(leaf.state)
-            # 3) 回溯
-            self._backprop(leaf, value)
+    def search(self, state: CombatState, iterations: int = 600) -> MCTSNode:
+        root = MCTSNode(state)
+        for i in range(iterations):
+            node = self._select(root)
+            if not node.terminal and node.untried:
+                node = self._expand(node)
+            reward = rollout(node.state, policy=self.default_policy, rng=self.rng)
+            self._backprop(node, reward)
+            # 早期停止：如果某个动作明显领先，提前终止
+            if i > 100 and i % 50 == 0 and root.children:
+                ranked = sorted(root.children, key=lambda c: c.visits, reverse=True)
+                if len(ranked) >= 2:
+                    top1, top2 = ranked[0], ranked[1]
+                    if top1.visits > 0 and top2.visits > 0:
+                        v1 = top1.value / top1.visits
+                        v2 = top2.value / top2.visits
+                        # 领先15%且访问次数足够，提前停止
+                        if v1 - v2 > 0.15 and top1.visits > 30:
+                            break
         return root
 
-    # -- 内部 --------------------------------------------------------------
-    def _expand(self, node: MCTSNode):
-        node.untried = legal_actions(node.state)
+    def _select(self, node: MCTSNode) -> MCTSNode:
+        while not node.terminal and not node.untried:
+            node = self._best_child(node)
+        return node
 
-    def _expand_one(self, node: MCTSNode) -> MCTSNode:
-        """从节点取一个未试动作，创建并返回子节点。"""
-        if not node.untried:
-            return node
-        action = node.untried.pop()
-        child_state = self._transition(node.state, action)
-        if child_state is None:
-            # 非法动作：忽略，继续取下一个
-            return self._expand_one(node)
-        child = MCTSNode(state=child_state, parent=node, action=action)
-        node.children[action] = child
-        self._expand(child)
+    def _expand(self, node: MCTSNode) -> MCTSNode:
+        action = self.rng.choice(node.untried)
+        node.untried.remove(action)
+        child = MCTSNode(apply_action(node.state, action), parent=node, action=action)
+        node.children.append(child)
         return child
 
-    def _transition(self, state: CombatState, action: Action) -> Optional[CombatState]:
-        if action.kind == "end_turn":
-            return enemy_turn(state, self.rng, self.memory)
-        return apply_action(state, action, self.rng, self.memory)
+    def _best_child(self, node: MCTSNode) -> MCTSNode:
+        best = None
+        best_score = -1.0
+        for ch in node.children:
+            if ch.visits == 0:
+                return ch
+            exploit = ch.value / ch.visits
+            explore = self.c * math.sqrt(math.log(node.visits) / ch.visits)
+            score = exploit + explore
+            if score > best_score:
+                best_score = score
+                best = ch
+        return best or node.children[0]
 
-    def _simulate(self, state: CombatState) -> float:
-        return rollout(state, self.rng, policy=self.default_policy, memory=self.memory)
-
-    def _backprop(self, node: MCTSNode, value: float):
+    def _backprop(self, node: MCTSNode, reward: float):
         while node is not None:
             node.visits += 1
-            node.value += value
+            node.value += reward
             node = node.parent
 
-    # -- 结果解读 ----------------------------------------------------------
-    def best_action(self, root: MCTSNode) -> Optional[Action]:
-        """返回平均收益最高的根动作。"""
-        if not root.children:
-            return None
-        return max(root.children, key=lambda a: root.children[a].value / max(1, root.children[a].visits))
-
-    def ranked_actions(self, root: MCTSNode) -> List[tuple]:
-        """按平均收益降序返回 [(action, 平均收益, 访问次数), ...]。"""
-        out = []
-        for a, child in root.children.items():
-            if child.visits == 0:
-                continue
-            out.append((a, child.value / child.visits, child.visits))
-        out.sort(key=lambda x: -x[1])
-        return out
+    def ranked_actions(self, root: MCTSNode) -> list[tuple[Action, float, int]]:
+        """按平均收益排序的 (action, avg_value, visits)。"""
+        results = []
+        for ch in root.children:
+            if ch.visits > 0 and ch.action is not None:
+                results.append((ch.action, ch.value / ch.visits, ch.visits))
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
