@@ -1,245 +1,291 @@
-"""卡牌效果库：把一张手牌解析成可供模拟器推演的离散效果。
-
-设计原则：
-- autoSpire 已直接给出伤害 / 格挡数值，这两项直接使用，不需查表。
-- 额外效果（上毒、生成小刀、弃牌、抽牌、加敏捷/力量、叠易伤/虚弱、AOE、
-  敌人降力量、回血、加能量等）无法从快照数值里拿到，需要从卡牌名 + 描述解析。
-- 优先查 ``CARD_EFFECTS`` 精确表（卡名唯一，兼容别名），查不到再回退到
-  描述关键词解析。目前覆盖静默猎手主流牌 + 少量通用牌，新牌只需在表里补一行。
-
-静默猎手关键机制：
-- 毒(Poison)  : 每回合开始结算，造成 = 毒层数伤害，然后层数 -1
-- 小刀(Shiv)  : 0 费攻击，打出后消耗，可被"精准"等强化
-- 弃牌        : 弃掉手牌，可触发弃牌收益（战术家回能、反射抽牌）与 Sly
-- Sly         : 被弃时按原费用自动打出
-- 敏捷        : 每点敏捷提供 +1 格挡
-"""
-
+"""静默猎手卡牌效果库：精确表 + 描述关键词回退。"""
 from __future__ import annotations
-
-import re
-from dataclasses import dataclass, field
-from functools import lru_cache
-from typing import Dict, Optional
-
+from typing import Optional
 from .model import Card
 
-SHIV_BASE_DAMAGE = 4  # 小刀基础伤害
+SHIV_BASE_DAMAGE = 4
 
+# 精确效果表：name -> dict(attack, block, poison, draw, energy, weak, vulnerable,
+#                             shiv, discard, sly, exhaust, innate, ethereal)
+CARD_EFFECTS: dict[str, dict] = {
+    # ===== 攻击牌 =====
+    "中和": dict(attack=3, weak=1, cost=1),
+    "中和+": dict(attack=5, weak=1, cost=1),
+    "致命毒药": dict(attack=0, poison=3, cost=1),
+    "致命毒药+": dict(attack=0, poison=4, cost=1),
+    "毒雾": dict(attack=0, poison=2, aoe_poison=True, cost=1, power=True),
+    "毒雾+": dict(attack=0, poison=3, aoe_poison=True, cost=1, power=True),
+    "无尽刀刃": dict(attack=0, shiv_per_turn=1, cost=1, power=True),
+    "无尽刀刃+": dict(attack=0, shiv_per_turn=2, cost=1, power=True),
+    "杂技": dict(attack=0, draw=2, discard=1, cost=1),
+    "杂技+": dict(attack=0, draw=3, discard=1, cost=1),
+    "背刺": dict(attack=6, cost=0, innate=True),
+    "背刺+": dict(attack=9, cost=0, innate=True),
+    "蛇咬": dict(attack=0, poison=7, cost=2, retain=True),
+    "蛇咬+": dict(attack=0, poison=9, cost=2, retain=True),
+    # ===== STS2 静默猎手卡牌（根据真实游戏数据修正） =====
+    "暴露": dict(attack=0, vulnerable=2, remove_block=True, cost=0, exhaust=True),
+    "暴露+": dict(attack=0, vulnerable=3, remove_block=True, cost=0, exhaust=True),
+    "啄击": dict(attack=2, hits=3, cost=1),
+    "啄击+": dict(attack=3, hits=3, cost=1),
+    "终结技": dict(attack=0, finisher=True, finisher_damage=6, cost=1),
+    "终结技+": dict(attack=0, finisher=True, finisher_damage=8, cost=1),
+    "袖里乾坤": dict(attack=0, add_shiv=3, cost=2),
+    "袖里乾坤+": dict(attack=0, add_shiv=4, cost=1),
+    "猛扑": dict(attack=14, next_skill_free=True, cost=2),
+    "猛扑+": dict(attack=18, next_skill_free=True, cost=2),
+    "逃脱计划": dict(attack=0, draw=1, cost=0, sly=True),
+    "逃脱计划+": dict(attack=0, draw=2, cost=0, sly=True),
+    "早有准备": dict(attack=0, draw=1, discard=1, cost=0),
+    "早有准备+": dict(attack=0, draw=2, discard=1, cost=0),
+    "余像": dict(attack=0, block=4, cost=1, retain=True),
+    "余像+": dict(attack=0, block=6, cost=1, retain=True),
+    "咕嘟冒泡": dict(attack=0, poison=9, conditional_poison=True, cost=1),
+    "咕嘟冒泡+": dict(attack=0, poison=12, conditional_poison=True, cost=1),
+    "生存者": dict(block=8, discard=1, cost=1),
+    "生存者+": dict(block=11, discard=1, cost=1),
+    "后空翻": dict(block=5, draw=2, cost=1),
+    "后空翻+": dict(block=8, draw=2, cost=1),
+    "侧步": dict(energy_next_turn=1, cost=0),
+    "侧步+": dict(energy_next_turn=2, cost=0),
+    "偏折": dict(block=5, cost=0),
+    "偏折+": dict(block=7, cost=0),
+    "余像": dict(cost=1, power=True, block_per_card=1),
+    "余像+": dict(cost=1, power=True, block_per_card=1),
+    "灵动步法": dict(dexterity=2, cost=1, power=True),
+    "灵动步法+": dict(dexterity=3, cost=1, power=True),
+    "蜃景": dict(block_from_poison=True, cost=1),
+    "蜃景+": dict(block_from_poison=True, cost=1),
+    "墨之刃": dict(add_shiv=2, cost=1),
+    "墨之刃+": dict(add_shiv=3, cost=1),
+    "尖啸": dict(strength_loss=6, exhaust=True, cost=1),
+    "尖啸+": dict(strength_loss=9, exhaust=True, cost=1),
+    "扫腿": dict(weak=2, block=11, cost=2),
+    "扫腿+": dict(weak=2, block=15, cost=2),
+    "毒性爆发": dict(aoe_poison=True, poison=9, trigger_poison=True, cost=3),
+    "毒性爆发+": dict(aoe_poison=True, poison=12, trigger_poison=True, cost=3),
+    "闪躲翻滚": dict(block=4, block_next_turn=4, cost=1),
+    "闪躲翻滚+": dict(block=6, block_next_turn=6, cost=1),
+    "非凡技艺": dict(strength=1, dexterity=1, cost=1, power=True),
+    "非凡技艺+": dict(strength=2, dexterity=2, cost=1, power=True),
+    "匕首投掷": dict(attack=4, draw=1, cost=1),
+    "匕首投掷+": dict(attack=6, draw=1, cost=1),
+    "防御": dict(block=5, cost=1),
+    "防御+": dict(block=8, cost=1),
+    "打击": dict(attack=6, cost=1),
+    "打击+": dict(attack=9, cost=1),
+    "飞刀": dict(attack=4, shiv=1, cost=1),
+    "飞刀+": dict(attack=6, shiv=1, cost=1),
+    "刀锋之舞": dict(attack=0, shiv=2, cost=1),
+    "刀锋之舞+": dict(attack=0, shiv=3, cost=1),
+    "弹射之刃": dict(attack=4, random_hits=3, cost=1),
+    "弹射之刃+": dict(attack=5, random_hits=3, cost=1),
+    "肾上腺素": dict(energy=2, draw=1, cost=0),
+    "肾上腺素+": dict(energy=2, draw=2, cost=0),
+    "计划妥当": dict(block=8, draw=1, cost=1),
+    "计划妥当+": dict(block=11, draw=1, cost=1),
+    "精准": dict(dexterity=2, cost=1, power=True),
+    "精准+": dict(dexterity=3, cost=1, power=True),
+    "淬毒": dict(attack=0, poison=1, cost=0, innate=True),
+    "淬毒+": dict(attack=0, poison=2, cost=0, innate=True),
+    "斗篷与匕首": dict(block=6, shiv=1, cost=1),
+    "斗篷与匕首+": dict(block=9, shiv=1, cost=1),
+    "飞膝踢": dict(attack=8, draw=1, cost=1),
+    "飞膝踢+": dict(attack=10, draw=1, cost=1),
+    "愤怒": dict(attack=6, vulnerable=1, cost=1),
+    "愤怒+": dict(attack=9, vulnerable=1, cost=1),
+    "秘法宝典": dict(draw=2, cost=0),
+    "秘法宝典+": dict(draw=3, cost=0),
+    "冲刺": dict(block=6, draw=1, cost=0),
+    "冲刺+": dict(block=8, draw=1, cost=0),
+    "残影": dict(block=4, cost=0, ethereal=True),
+    "残影+": dict(block=6, cost=0, ethereal=True),
+    "战术家": dict(attack=0, energy=1, cost=0, sly=True),
+    "战术家+": dict(attack=0, energy=2, cost=0, sly=True),
+    "反射": dict(attack=0, draw=2, cost=0, sly=True),
+    "反射+": dict(attack=0, draw=3, cost=0, sly=True),
+    "逃脱计划": dict(block=4, draw=1, cost=0),
+    "逃脱计划+": dict(block=6, draw=1, cost=0),
+    "致命倒计时": dict(attack=0, poison=5, cost=2),
+    "致命倒计时+": dict(attack=0, poison=7, cost=2),
+    "催化剂": dict(poison_multiply=2, cost=1),
+    "催化剂+": dict(poison_multiply=3, cost=1),
+    "弹弹乐": dict(attack=3, random_hits=4, cost=1),
+    "弹弹乐+": dict(attack=4, random_hits=4, cost=1),
+    "连环腿": dict(attack=5, weak=1, cost=1),
+    "连环腿+": dict(attack=7, weak=1, cost=1),
+    "得意": dict(attack=0, draw=1, energy=1, cost=0),
+    "得意+": dict(attack=0, draw=2, energy=1, cost=0),
+    # ===== 能力牌 =====
+    "无形": dict(cost=3, power=True, intangible=True),
+    "无形+": dict(cost=2, power=True, intangible=True),
+    "模糊": dict(block_per_turn=5, cost=1, power=True),
+    "模糊+": dict(block_per_turn=8, cost=1, power=True),
+    "黑暗之拥": dict(cost=2, power=True, on_exhaust_draw=1),
+    "黑暗之拥+": dict(cost=1, power=True, on_exhaust_draw=1),
+    "尸爆术": dict(cost=2, enemy_kill_explode=True),
+    "尸爆术+": dict(cost=1, enemy_kill_explode=True),
+    "tools of the trade": dict(cost=1, power=True, draw_per_turn=1, discard_per_turn=1),
+}
 
-@dataclass
-class CardEffects:
-    """一次打出产生的效果集合（模拟器按此推进状态）。"""
+# 英文名映射（autoSpire 可能返回英文名）
+_EN_TO_ZH = {
+    "Neutralize": "中和", "Deadly Poison": "致命毒药", "Noxious Fumes": "毒雾",
+    "Infinite Blades": "无尽刀刃", "Acrobatics": "杂技", "Backstab": "背刺",
+    "Dagger Throw": "匕首投掷", "Defend": "防御", "Strike": "打击",
+    "Blade Dance": "刀锋之舞", "Flying Knee": "飞膝踢", "Sucker Punch": "愤怒",
+    "Outmaneuver": "秘法宝典", "Dash": "冲刺", "Blur": "模糊",
+    "Tactician": "战术家", "Reflex": "反射", "Escape Plan": "逃脱计划",
+    "Deadly Countdown": "致命倒计时", "Catalyst": "催化剂",
+    "Well-Laid Plans": "计划妥当", "Footwork": "精准", "Envenom": "淬毒",
+    "Cloak And Dagger": "斗篷与匕首", "Adrenaline": "肾上腺素",
+    "Wraith Form": "无形", "Dark Embrace": "黑暗之拥", "Corpse Explosion": "尸爆术",
+    "Bouncing Flask": "弹弹乐", "Riddle with Holes": "连环腿", "Bravado": "得意",
+    "Survivor": "残影", "Shiv": "小刀",
+}
 
-    damage: int = 0          # 对单目标或 AOE 的伤害
-    block: int = 0           # 玩家获得格挡
-    draw: int = 0            # 抽牌数
-    energy_gain: int = 0     # 额外获得能量
-    self_buffs: Dict[str, int] = field(default_factory=dict)   # 玩家 buff / 能力
-    enemy_debuffs: Dict[str, int] = field(default_factory=dict)  # 对目标的 debuff
-    aoe: bool = False        # 是否对所有敌人生效
-    heal: int = 0            # 回复生命
-    exhaust: bool = False    # 是否消耗
-    unknown: bool = False    # 是否未识别（用于标记启发式近似）
-    # ---- 静默猎手专属 ----
-    poison: int = 0              # 对目标施加毒层数
-    poison_aoe: int = 0          # 对所有敌人施加毒
-    shiv_count: int = 0          # 加入手牌的小刀数
-    discard: int = 0             # 弃牌数（从手牌随机弃）
-    sly: bool = False            # 该牌带 Sly：被弃时按原费自动打出
-    weak_aoe: int = 0            # 对所有敌人施加虚弱
-    vulnerable_aoe: int = 0      # 对所有敌人施加易伤
-    enemy_strength_loss: int = 0  # 所有敌人本回合 -力量
-    retain_block: bool = False   # 格挡不清零（模糊）
+_effect_cache: dict[str, dict] = {}
 
-
-def make_shiv(hand_index: int = 0, damage: int = SHIV_BASE_DAMAGE) -> Card:
-    """构造一张小刀卡：0 费攻击、打出后消耗。"""
-    return Card(
-        name="小刀",
-        hand_index=hand_index,
-        cost=0,
-        damage=damage,
-        description=f"造成 {damage} 点伤害。消耗。",
-        card_type="attack",
-        shiv=True,
-        exhaust=True,
-    )
-
-
-# 精确表：卡牌名 -> 效果覆盖。值为 dict，字段名与 CardEffects 对齐。
-# damage / block 数值由 autoSpire 快照提供，表里只补"额外效果"。
-# 可同时给出多个别名（aliases 字段）。能力牌用 self_buffs 的能力键注册。
-CARD_EFFECTS: Dict[str, Dict] = {
-    # ---------------- 基础 / 初始 ----------------
-    "打击": {},
-    "防御": {},
-    "中和": {"enemy_debuffs": {"虚弱": 1}},                       # 3伤+1虚弱
-    "生存者": {"discard": 1},                                    # 8格挡+弃1
-    "切": {},
-    # ---------------- 静默猎手 · 毒 ----------------
-    "淬毒之刃": {"poison": 3},
-    "毒刺": {"poison": 3},
-    "致命毒药": {"poison": 5},
-    "弹跳药瓶": {"poison": 9},                                   # 随机3次×3 ≈ 单目标9
-    "催化": {"poison_x": 3},                                     # 毒翻倍（模拟器特殊处理）
-    "蛇咬": {"poison": 7},
-    "迷雾": {"poison_aoe": 4},
-    "腐蚀波": {"poison_aoe_per_draw": 3},                        # 抽牌时全体上毒
-    "加速器": {"poison_extra_tick": 1},                          # 毒额外结算一次
-    # ---------------- 静默猎手 · 小刀 ----------------
-    "刀刃之舞": {"shiv_count": 3},
-    "斗篷与匕首": {"shiv_count": 1},
-    "无尽刀刃": {"self_buffs": {"无尽刀刃": 1}},                 # 能力：回合开始+1小刀
-    "精准": {"self_buffs": {"精准": 1}},                         # 能力：小刀+4伤
-    "刀刃之扇": {"self_buffs": {"刀刃之扇": 1}, "shiv_count": 4},  # 能力+4小刀
-    "幻影之刃": {"self_buffs": {"幻影之刃": 1}},                 # 能力：首刀+9
-    "隐秘匕首": {"discard": 2, "shiv_count": 2},
-    # ---------------- 静默猎手 · 弃牌 / Sly ----------------
-    "杂技": {"draw": 3, "discard": 1},
-    "后空翻": {"draw": 2},                                       # 5格挡抽2
-    "早有准备": {"draw": 1, "discard": 1},
-    "算计": {"discard_hand": True},                              # 弃手牌抽回
-    "战术家": {"self_buffs": {"战术家": 1}},                     # 弃牌回1能量
-    "反射": {"self_buffs": {"反射": 1}},                         # 弃牌抽2
-    "投掷匕首": {"draw": 1, "discard": 1},
-    "突袭": {},
-    "偷袭": {"enemy_debuffs": {"虚弱": 1}},
-    "扫腿": {"enemy_debuffs": {"虚弱": 2}},
-    "暗杀": {"enemy_debuffs": {"易伤": 1}},
-    "精准打击": {},                                             # 17伤（每技能降费，动态）
-    "串刺": {"damage_x": True},                                # X次7伤
-    "终结技": {"damage_per_attack": 6},                         # 每攻击+6
-    "飞刀": {"damage_per_skill": 5},                            # 每技能+5
-    # ---------------- 静默猎手 · 敏捷 / 防御 ----------------
-    "步法": {"self_buffs": {"敏捷": 2}},                        # 能力：+2敏捷
-    "冲刺": {},                                                 # 10格挡10伤
-    "模糊": {"retain_block": True},
-    "幽灵形态": {"self_buffs": {"无形": 3}, "exhaust": True},    # 能力：无形3回合
-    "尖啸": {"enemy_strength_loss": 6},
-    "逃脱计划": {"draw": 1},                                    # 抽1，若技能+3格挡
-    "暴露": {"enemy_debuffs": {"易伤": 2}, "remove_enemy_block": True},
-    "肾上腺素": {"energy_gain": 1, "draw": 2},
-    # ---------------- 通用 / 其他 ----------------
-    "重刃": {"self_buffs": {"力量": 1}},
-    "旋风斩": {"aoe": True},
+# dynamic_values 名称 → 效果字段的映射
+_DYNAMIC_FIELD_MAP = {
+    "damage": "attack",
+    "block": "block",
+    "poisonpower": "poison",
+    "weakpower": "weak",
+    "vulnerablepower": "vulnerable",
+    "strengthpower": "strength",
+    "dexteritypower": "dexterity",
+    "drawpower": "draw",
+    "cards": "draw",
+    "energy": "energy",
+    "repeat": "hits",
+    "power": "vulnerable",  # 暴露牌的 Power 字段是易伤层数
 }
 
 
-# 描述关键词 -> 效果。用于 CARD_EFFECTS 未覆盖的牌。
-_KEYWORDS = [
-    (r"抽\s*(\d+)\s*张牌", "draw"),
-    (r"抽\s*(\d+)\s*张", "draw"),
-    (r"获得\s*(\d+)\s*点力量", "self_buffs_力量"),
-    (r"力量\s*\+\s*(\d+)", "self_buffs_力量"),
-    (r"获得\s*(\d+)\s*点敏捷", "self_buffs_敏捷"),
-    (r"敏捷\s*\+\s*(\d+)", "self_buffs_敏捷"),
-    (r"获得\s*(\d+)\s*点能量", "energy_gain"),
-    (r"附加\s*(\d+)\s*层易伤", "enemy_debuffs_易伤"),
-    (r"易伤\s*(\d+)", "enemy_debuffs_易伤"),
-    (r"附加\s*(\d+)\s*层虚弱", "enemy_debuffs_虚弱"),
-    (r"虚弱\s*(\d+)", "enemy_debuffs_虚弱"),
-    (r"施加\s*(\d+)\s*点中毒", "poison"),
-    (r"上毒\s*(\d+)", "poison"),
-    (r"回复\s*(\d+)\s*点生命", "heal"),
-    (r"回复\s*(\d+)\s*点血", "heal"),
-    (r"所有敌人", "aoe"),
-    (r"全体敌人", "aoe"),
-    (r"丢弃\s*(\d+)\s*张牌", "discard"),
-    (r"弃\s*(\d+)\s*张", "discard"),
-    (r"将\s*(\d+)\s*张小刀", "shiv_count"),
-    (r"加入\s*(\d+)\s*张小刀", "shiv_count"),
-    (r"造成\s*(\d+)\s*点伤害", "damage_from_desc"),
-    (r"获得\s*(\d+)\s*点格挡", "block_from_desc"),
-]
+def _dynamic_values_signature(dv_list: list) -> str:
+    """生成 dynamic_values 的短哈希，用于缓存 key。"""
+    if not dv_list:
+        return ""
+    parts = []
+    for dv in dv_list:
+        if isinstance(dv, dict):
+            parts.append(f"{dv.get('name','')}:{dv.get('current_value','')}")
+    return "|".join(parts)
 
 
-def effects_for_card(card: Card) -> CardEffects:
-    """解析一张牌的效果（按卡牌原子字段缓存，效果解析是每步结算/剪枝的热点）。"""
-    return _effects_cached(card.name, card.damage, card.block, card.cost,
-                           card.description, card.card_type, card.shiv, card.sly, card.exhaust)
-
-
-@lru_cache(maxsize=8192)
-def _effects_cached(name, damage, block, cost, description, card_type, shiv, sly, exhaust) -> CardEffects:
-    """实际解析实现（结果缓存；返回的 CardEffects 只读，调用方不得修改）。"""
-    card = Card(name=name, hand_index=-1, cost=cost, damage=damage, block=block,
-                description=description, card_type=card_type, shiv=shiv, sly=sly, exhaust=exhaust)
-    ef = CardEffects(damage=card.damage, block=card.block)
-
-    key = card.name.strip()
-    rule = CARD_EFFECTS.get(key)
-    if rule is None:
-        for k, r in CARD_EFFECTS.items():
-            if key in r.get("aliases", []):
-                rule = r
-                break
-    if rule is not None:
-        if rule.get("aoe"):
-            ef.aoe = True
-        ef.draw += rule.get("draw", 0)
-        ef.energy_gain += rule.get("energy_gain", 0)
-        ef.heal += rule.get("heal", 0)
-        ef.poison += rule.get("poison", 0)
-        ef.poison_aoe += rule.get("poison_aoe", 0)
-        ef.shiv_count += rule.get("shiv_count", 0)
-        ef.discard += rule.get("discard", 0)
-        ef.weak_aoe += rule.get("weak_aoe", 0)
-        ef.vulnerable_aoe += rule.get("vulnerable_aoe", 0)
-        ef.enemy_strength_loss += rule.get("enemy_strength_loss", 0)
-        ef.retain_block = ef.retain_block or rule.get("retain_block", False)
-        ef.exhaust = ef.exhaust or rule.get("exhaust", False)
-        for k, v in rule.get("self_buffs", {}).items():
-            ef.self_buffs[k] = ef.self_buffs.get(k, 0) + v
-        for k, v in rule.get("enemy_debuffs", {}).items():
-            ef.enemy_debuffs[k] = ef.enemy_debuffs.get(k, 0) + v
-        ef.unknown = bool(rule.get("damage_x") or rule.get("damage_per_attack")
-                          or rule.get("damage_per_skill") or rule.get("discard_hand")
-                          or rule.get("remove_enemy_block") or rule.get("poison_x")
-                          or rule.get("poison_extra_tick") or rule.get("poison_aoe_per_draw"))
-        return ef
-
-    # 描述关键词回退
-    desc = card.description or ""
-    for pat, kind in _KEYWORDS:
-        m = re.search(pat, desc)
-        if not m:
+def _apply_dynamic_values(eff: dict, card: Card) -> dict:
+    """用 mod 提供的 dynamic_values 覆盖基础效果（已包含状态修正的实际数值）。"""
+    if not card.dynamic_values:
+        return eff
+    for dv in card.dynamic_values:
+        if not isinstance(dv, dict):
             continue
-        val = _parse_int(m.group(1) if m.groups() else m.group(0))
-        if val is None:
-            val = _parse_int(m.group(0))
-        val = val or 0
-        if kind == "draw":
-            ef.draw += val
-        elif kind == "energy_gain":
-            ef.energy_gain += val
-        elif kind == "heal":
-            ef.heal += val
-        elif kind == "aoe":
-            ef.aoe = True
-        elif kind == "poison":
-            ef.poison += val
-        elif kind == "discard":
-            ef.discard += val
-        elif kind == "shiv_count":
-            ef.shiv_count += val
-        elif kind == "self_buffs_力量":
-            ef.self_buffs["力量"] = ef.self_buffs.get("力量", 0) + val
-        elif kind == "self_buffs_敏捷":
-            ef.self_buffs["敏捷"] = ef.self_buffs.get("敏捷", 0) + val
-        elif kind == "enemy_debuffs_易伤":
-            ef.enemy_debuffs["易伤"] = ef.enemy_debuffs.get("易伤", 0) + val
-        elif kind == "enemy_debuffs_虚弱":
-            ef.enemy_debuffs["虚弱"] = ef.enemy_debuffs.get("虚弱", 0) + val
-        elif kind == "damage_from_desc":
-            ef.damage = ef.damage or val
-        elif kind == "block_from_desc":
-            ef.block = ef.block or val
-    return ef
+        name = str(dv.get("name", "")).lower()
+        field = _DYNAMIC_FIELD_MAP.get(name)
+        if field is None:
+            continue
+        try:
+            val = int(dv.get("current_value", dv.get("base_value")))
+            eff[field] = val
+        except (ValueError, TypeError):
+            continue
+    return eff
 
 
-def _parse_int(text: Optional[str]) -> Optional[int]:
-    if not text:
-        return None
-    m = re.search(r"(\d+)", text)
-    return int(m.group(1)) if m else None
+def _normalize_name(name: str) -> str:
+    n = name.strip()
+    return _EN_TO_ZH.get(n, n)
+
+
+def effects_for_card(card: Card) -> dict:
+    """获取卡牌效果，带缓存。优先使用 mod 提供的 dynamic_values（已修正状态）。"""
+    dyn_sig = _dynamic_values_signature(card.dynamic_values)
+    key = card.fingerprint()
+    if dyn_sig:
+        key = f"{key}|{dyn_sig}"
+    if key in _effect_cache:
+        return _effect_cache[key]
+
+    name = _normalize_name(card.name)
+    up_name = name + "+" if card.upgraded else name
+    eff = CARD_EFFECTS.get(up_name) or CARD_EFFECTS.get(name)
+    if eff is None:
+        eff = _fallback_effects(card)
+    eff = dict(eff)
+    eff.setdefault("cost", card.cost if card.cost >= 0 else 1)
+
+    # 关键优化：用 mod 提供的动态数值覆盖（包含脆弱/力量/敏捷修正）
+    if card.dynamic_values:
+        # mod 提供了准确数据，清除 fallback 的默认攻击/格挡（避免误导）
+        if "attack" not in (CARD_EFFECTS.get(up_name) or CARD_EFFECTS.get(name) or {}):
+            eff.pop("attack", None)
+        if "block" not in (CARD_EFFECTS.get(up_name) or CARD_EFFECTS.get(name) or {}):
+            eff.pop("block", None)
+    eff = _apply_dynamic_values(eff, card)
+
+    _effect_cache[key] = eff
+    return eff
+
+
+def _fallback_effects(card: Card) -> dict:
+    """描述关键词回退：从 resolved_rules_text 解析效果，比默认值更准确。"""
+    eff = {"cost": card.cost if card.cost >= 0 else 1}
+    text = (getattr(card, "resolved_text", "") or "").lower()
+    name = card.name.lower()
+
+    # 从描述文本中解析数值效果
+    import re
+    # 抽牌：抽X张 / Draw X cards
+    m = re.search(r"抽\s*(\d+)\s*张|draw\s*(\d+)\s*card", text)
+    if m:
+        eff["draw"] = int(m.group(1) or m.group(2))
+    # 能量：获得X能量 / Gain X energy
+    m = re.search(r"获得\s*(\d+)\s*[点能]|gain\s*(\d+)\s*energy", text)
+    if m:
+        eff["energy"] = int(m.group(1) or m.group(2))
+    # 弃牌：弃X张 / Discard X cards
+    m = re.search(r"弃\s*(\d+)\s*张|discard\s*(\d+)\s*card", text)
+    if m:
+        eff["discard"] = int(m.group(1) or m.group(2))
+    # 虚弱：施加X层虚弱 / Apply X weak
+    m = re.search(r"虚弱\s*(\d+)|apply\s*(\d+)\s*weak", text)
+    if m:
+        eff["weak"] = int(m.group(1) or m.group(2))
+    # 易伤：施加X层易伤 / Apply X vulnerable
+    m = re.search(r"易伤\s*(\d+)|apply\s*(\d+)\s*vulnerable", text)
+    if m:
+        eff["vulnerable"] = int(m.group(1) or m.group(2))
+    # 小刀：生成X把小刀 / Create X shiv
+    m = re.search(r"小刀\s*(\d+)|create\s*(\d+)\s*shiv", text)
+    if m:
+        eff["shiv"] = int(m.group(1) or m.group(2))
+
+    # 关键词标记
+    if "保留" in text or "retain" in text:
+        eff["retain"] = True
+    if "消耗" in text or "exhaust" in text:
+        eff["exhaust"] = True
+    if "固有" in text or "innate" in text:
+        eff["innate"] = True
+    if "虚无" in text or "ethereal" in text:
+        eff["ethereal"] = True
+    if "能力" in text or "power" in text:
+        eff["power"] = True
+    if "sly" in text or "被弃" in text:
+        eff["sly"] = True
+
+    # 如果描述文本没有解析出攻击/格挡/毒，用默认值（dynamic_values 会覆盖）
+    if "attack" not in eff and "block" not in eff and "poison" not in eff:
+        if "defend" in name or "防御" in card.name:
+            eff["block"] = 5
+        elif "strike" in name or "打击" in card.name:
+            eff["attack"] = 6
+        else:
+            eff["attack"] = 4  # 默认当作小攻击
+    return eff
+
+
+def make_shiv() -> Card:
+    c = Card("小刀", cost=0, card_type="attack", exhaust=True)
+    return c
