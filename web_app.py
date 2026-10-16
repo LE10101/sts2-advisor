@@ -726,457 +726,382 @@ if(!localStorage.getItem('sts2_welcome_shown')){setTimeout(()=>document.getEleme
 LOGIN_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>登录 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;min-height:100vh;display:flex;align-items:center;justify-content:center;}
-.login-box{background:#1a2a3a;padding:40px;border-radius:12px;border:1px solid #2d4a6a;width:360px;}
-.login-box h1{color:#4fc3f7;font-size:24px;margin-bottom:8px;text-align:center;}
-.login-box p{color:#8899aa;font-size:14px;text-align:center;margin-bottom:24px;}
-.form-group{margin-bottom:16px;}
-.form-group label{display:block;font-size:14px;color:#8899aa;margin-bottom:6px;}
-.form-group input{width:100%;padding:10px 12px;background:#0f1923;border:1px solid #2d4a6a;border-radius:6px;color:#e0e6ed;font-size:14px;}
-.form-group input:focus{outline:none;border-color:#4fc3f7;}
-.btn{width:100%;padding:12px;background:#4fc3f7;color:#0f1923;border:none;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:8px;}
-.btn:hover{background:#81d4fa;}
-.error{color:#ef5350;font-size:13px;margin-top:8px;text-align:center;min-height:18px;}
-.links{margin-top:16px;text-align:center;font-size:14px;}
-.links a{color:#4fc3f7;text-decoration:none;}
-.steam-btn{width:100%;padding:10px;background:#1b2838;color:#66c0f4;border:1px solid #66c0f4;border-radius:6px;font-size:14px;cursor:pointer;margin-top:12px;}
+.login-wrap{max-width:420px;margin:60px auto;padding:0 20px;}
+.login-box{background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid var(--gold-dark);border-radius:8px;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.login-box h1{font-family:'Cinzel',serif;color:var(--gold);text-align:center;margin-bottom:8px;font-size:28px;}
+.login-box .subtitle{text-align:center;color:var(--text-gray);margin-bottom:28px;font-size:14px;}
+.error{background:rgba(184,64,64,.15);border:1px solid var(--red);color:var(--red-light);padding:10px 14px;border-radius:4px;margin-bottom:16px;font-size:13px;}
 </style></head>
 <body>
-<div class="login-box">
-  <h1>STS2 决策器</h1><p>登录以同步你的对局历史</p>
-  <div class="form-group"><label>用户名</label><input type="text" id="username" placeholder="输入用户名"></div>
-  <div class="form-group"><label>密码</label><input type="password" id="password" placeholder="输入密码"></div>
-  <button class="btn" onclick="doLogin()">登录</button>
-  <div class="error" id="error"></div>
-  <button class="steam-btn" onclick="alert('Steam登录开发中')">用Steam账号登录</button>
-  <div class="links">还没有账号？<a href="/register">立即注册</a></div>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+  <a href="/live">当前对局</a><a href="/history">历史对局</a>
+  <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+</div></div>
+<div class="login-wrap">
+  <div class="login-box">
+    <h1>⚔️ 登录</h1>
+    <div class="subtitle">STS2 决策器 · 静默猎手AI教练</div>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="POST" action="/login">
+      <div class="form-group"><label>用户名</label><input type="text" name="username" required placeholder="输入用户名"></div>
+      <div class="form-group"><label>密码</label><input type="password" name="password" required placeholder="输入密码"></div>
+      <button type="submit" class="btn primary" style="width:100%;margin-top:10px;">登 录</button>
+    </form>
+    <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-gray);">
+      还没有账号？<a href="/register" style="color:var(--gold);">立即注册</a>
+    </div>
+  </div>
 </div>
-<script>
-function doLogin(){
-  const u=document.getElementById('username').value,p=document.getElementById('password').value;
-  fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
-  .then(r=>r.json()).then(d=>{if(d.ok){location.href='/';}else{document.getElementById('error').textContent=d.error;}});
-}
-document.getElementById('password').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
-</script>
 </body></html>"""
 
 REGISTER_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>注册 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;min-height:100vh;display:flex;align-items:center;justify-content:center;}
-.login-box{background:#1a2a3a;padding:40px;border-radius:12px;border:1px solid #2d4a6a;width:360px;}
-.login-box h1{color:#4fc3f7;font-size:24px;margin-bottom:8px;text-align:center;}
-.login-box p{color:#8899aa;font-size:14px;text-align:center;margin-bottom:24px;}
-.form-group{margin-bottom:16px;}
-.form-group label{display:block;font-size:14px;color:#8899aa;margin-bottom:6px;}
-.form-group input{width:100%;padding:10px 12px;background:#0f1923;border:1px solid #2d4a6a;border-radius:6px;color:#e0e6ed;font-size:14px;}
-.form-group input:focus{outline:none;border-color:#4fc3f7;}
-.btn{width:100%;padding:12px;background:#4fc3f7;color:#0f1923;border:none;border-radius:6px;font-size:16px;font-weight:bold;cursor:pointer;margin-top:8px;}
-.btn:hover{background:#81d4fa;}
-.error{color:#ef5350;font-size:13px;margin-top:8px;text-align:center;min-height:18px;}
-.links{margin-top:16px;text-align:center;font-size:14px;}
-.links a{color:#4fc3f7;text-decoration:none;}
+.register-wrap{max-width:420px;margin:60px auto;padding:0 20px;}
+.register-box{background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid var(--gold-dark);border-radius:8px;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.6);}
+.register-box h1{font-family:'Cinzel',serif;color:var(--gold);text-align:center;margin-bottom:8px;font-size:28px;}
+.register-box .subtitle{text-align:center;color:var(--text-gray);margin-bottom:28px;font-size:14px;}
+.error{background:rgba(184,64,64,.15);border:1px solid var(--red);color:var(--red-light);padding:10px 14px;border-radius:4px;margin-bottom:16px;font-size:13px;}
 </style></head>
 <body>
-<div class="login-box">
-  <h1>注册账号</h1><p>创建账号以同步对局历史</p>
-  <div class="form-group"><label>用户名（至少3字符）</label><input type="text" id="username" placeholder="输入用户名"></div>
-  <div class="form-group"><label>密码（至少6字符）</label><input type="password" id="password" placeholder="输入密码"></div>
-  <div class="form-group"><label>确认密码</label><input type="password" id="password2" placeholder="再次输入密码"></div>
-  <button class="btn" onclick="doRegister()">注册</button>
-  <div class="error" id="error"></div>
-  <div class="links">已有账号？<a href="/login">去登录</a></div>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+  <a href="/live">当前对局</a><a href="/history">历史对局</a>
+  <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+</div></div>
+<div class="register-wrap">
+  <div class="register-box">
+    <h1>📜 注册</h1>
+    <div class="subtitle">创建账号，云端同步你的对局数据</div>
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+    <form method="POST" action="/register">
+      <div class="form-group"><label>用户名</label><input type="text" name="username" required placeholder="3-20个字符"></div>
+      <div class="form-group"><label>密码</label><input type="password" name="password" required placeholder="至少6个字符"></div>
+      <div class="form-group"><label>确认密码</label><input type="password" name="password2" required placeholder="再次输入密码"></div>
+      <button type="submit" class="btn primary" style="width:100%;margin-top:10px;">注 册</button>
+    </form>
+    <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-gray);">
+      已有账号？<a href="/login" style="color:var(--gold);">直接登录</a>
+    </div>
+  </div>
 </div>
-<script>
-function doRegister(){
-  const u=document.getElementById('username').value,p=document.getElementById('password').value,p2=document.getElementById('password2').value;
-  if(p!==p2){document.getElementById('error').textContent='两次密码不一致';return;}
-  fetch('/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})})
-  .then(r=>r.json()).then(d=>{if(d.ok){location.href='/';}else{document.getElementById('error').textContent=d.error;}});
-}
-</script>
 </body></html>"""
 
 LIVE_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>当前对局 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;min-height:100vh;}
-.topbar{background:#1a2a3a;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #2d4a6a;position:sticky;top:0;z-index:100;}
-.topbar a{color:#4fc3f7;text-decoration:none;font-size:14px;}
-.topbar .status{font-size:12px;padding:4px 10px;border-radius:12px;}
-.online{background:#1b5e20;color:#66bb6a;}.offline{background:#b71c1c;color:#ef5350;}
-.container{max-width:800px;margin:0 auto;padding:16px;}
-.panel{background:#1a2a3a;border-radius:10px;padding:16px;margin-bottom:16px;border:1px solid #2d4a6a;}
-.panel h2{font-size:16px;color:#4fc3f7;margin-bottom:12px;}
-.rec-card{background:linear-gradient(135deg,#1e3a5f,#1a2a3a);border:2px solid #4fc3f7;border-radius:10px;padding:16px;margin-bottom:12px;}
-.rec-card .action{font-size:20px;font-weight:bold;color:#fff;}
-.rec-card .reason{color:#88ccff;font-size:14px;margin-top:8px;line-height:1.6;}
-.stat-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;}
-.stat{flex:1;min-width:80px;text-align:center;}
-.stat .val{font-size:24px;font-weight:bold;color:#fff;}
-.stat .lbl{font-size:12px;color:#8899aa;}
-.enemy{background:#2a1a1a;border-radius:8px;padding:10px;margin-bottom:8px;border-left:3px solid #ef5350;}
-.enemy .name{font-weight:bold;color:#ef9a9a;}
-.enemy .hp-bar{height:6px;background:#333;border-radius:3px;margin:6px 0;overflow:hidden;}
-.enemy .hp-fill{height:100%;background:linear-gradient(90deg,#ef5350,#ff8a65);transition:width .3s;}
-.enemy .intent{font-size:13px;color:#ffcc80;margin-top:4px;}
-.hand{display:flex;flex-wrap:wrap;gap:6px;}
-.card-item{background:#2a3a4a;border-radius:6px;padding:8px 10px;font-size:13px;border:1px solid #3d5a7a;}
-.card-item.playable{border-color:#66bb6a;}
-.card-item.unplayable{opacity:.5;border-color:#555;}
-.card-item .cost{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;background:#4fc3f7;border-radius:50%;font-size:11px;margin-right:6px;color:#000;font-weight:bold;}
-.draw-order{font-size:13px;color:#aaa;line-height:1.8;}
-.draw-order .known{color:#66bb6a;}
-.alternatives{margin-top:8px;}
-.alt-item{padding:8px;background:#15202b;border-radius:6px;margin-bottom:4px;font-size:13px;display:flex;justify-content:space-between;}
-.alt-item .val{color:#8899aa;}
+.live-container{max-width:1200px;margin:0 auto;padding:20px;}
+.status-panel{background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:8px;padding:20px;margin-bottom:16px;}
+.status-row{display:flex;gap:20px;flex-wrap:wrap;align-items:center;}
+.status-item{display:flex;align-items:center;gap:8px;font-size:15px;}
+.status-item .icon{font-size:22px;}
+.status-item.hp{color:var(--red-light);}
+.status-item.gold{color:var(--gold);}
+.status-item.floor{color:var(--blue-light);}
+.phase-badge{padding:4px 12px;border-radius:3px;font-size:13px;font-weight:600;}
+.phase-combat{background:rgba(184,64,64,.2);color:var(--red-light);border:1px solid var(--red);}
+.phase-map{background:rgba(74,122,184,.2);color:var(--blue-light);border:1px solid var(--blue);}
+.phase-reward{background:rgba(90,138,74,.2);color:var(--green-light);border:1px solid var(--green);}
+.phase-shop{background:rgba(201,162,39,.2);color:var(--gold);border:1px solid var(--gold);}
+.recommendation{background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid var(--gold-dark);border-radius:8px;padding:20px;margin-bottom:16px;}
+.recommendation h3{font-family:'Cinzel',serif;color:var(--gold);font-size:18px;margin-bottom:12px;}
+.rec-item{padding:10px 14px;background:rgba(201,162,39,.08);border-left:3px solid var(--gold);border-radius:0 4px 4px 0;margin-bottom:8px;font-size:14px;color:var(--text-cream);}
+.rec-item .score{float:right;color:var(--gold);font-weight:700;}
+.monster-panel{background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:8px;padding:16px;margin-bottom:16px;}
+.monster-panel h4{color:var(--red-light);margin-bottom:10px;font-size:15px;}
+.monster-intent{display:inline-block;padding:4px 10px;background:rgba(184,64,64,.15);border-radius:3px;font-size:13px;color:var(--red-light);margin-right:8px;}
+.deck-panel{background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:8px;padding:16px;}
+.deck-panel h4{color:var(--gold);margin-bottom:10px;font-size:15px;}
+.draw-pile{display:flex;flex-wrap:wrap;gap:6px;}
+.draw-card{padding:4px 10px;background:var(--bg-deepest);border:1px solid #3a2f20;border-radius:3px;font-size:12px;color:var(--text-cream);}
+.disconnected{text-align:center;padding:80px 20px;color:var(--text-dim);}
+.disconnected .icon{font-size:64px;margin-bottom:16px;}
+.disconnected h2{color:var(--gold);margin-bottom:8px;}
 </style></head>
 <body>
-<div class="topbar"><a href="/">← 返回首页</a><span>当前对局</span><span class="status offline" id="connStatus">未连接</span></div>
-<div class="container">
-  <div class="panel"><h2>🎯 推荐动作</h2><div id="recContent"><p style="color:#8899aa">等待游戏数据...</p></div></div>
-  <div class="panel"><h2>📊 状态</h2><div class="stat-row" id="stats"></div></div>
-  <div class="panel"><h2>👹 敌人</h2><div id="enemies"></div></div>
-  <div class="panel"><h2>🃏 手牌</h2><div class="hand" id="hand"></div></div>
-  <div class="panel"><h2>📜 牌序记忆 <span style="font-size:12px;color:#8899aa;font-weight:normal">SL后可查看抽牌顺序</span></h2><div class="draw-order" id="drawOrder">暂无数据</div></div>
-  <div class="panel"><h2>💡 备选方案</h2><div class="alternatives" id="alts"></div></div>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+  <a href="/live" class="active">当前对局</a><a href="/history">历史对局</a>
+  <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+</div></div>
+<div class="page-header"><h1>⚔️ 当前对局</h1><p>实时战斗决策 · 怪物行为 · 牌序记忆</p></div>
+<div class="live-container" id="liveContent">
+  <div class="disconnected"><div class="icon">🎮</div><h2>等待游戏连接...</h2><p>请确保游戏已启动，本地Agent正在运行</p><p style="margin-top:10px;font-size:13px;">每3秒自动刷新</p></div>
 </div>
 <script>
-async function update(){
-  try{
-    const r=await fetch('/api/recommend');const d=await r.json();
-    document.getElementById('connStatus').textContent='已连接';document.getElementById('connStatus').className='status online';
-    if(d.error){document.getElementById('recContent').innerHTML='<p style="color:#ef5350">'+d.error+'</p>';return;}
-    if(d.phase==='combat'&&d.state){
-      const s=d.state;
-      document.getElementById('stats').innerHTML='<div class="stat"><div class="val" style="color:#ef5350">'+s.hp+'/'+s.max_hp+'</div><div class="lbl">生命</div></div><div class="stat"><div class="val" style="color:#4fc3f7">'+s.block+'</div><div class="lbl">格挡</div></div><div class="stat"><div class="val" style="color:#ffcc80">'+s.energy+'</div><div class="lbl">能量</div></div><div class="stat"><div class="val">T'+s.turn+'</div><div class="lbl">回合</div></div>';
-      if(d.best){document.getElementById('recContent').innerHTML='<div class="rec-card"><div class="action">'+d.best.label+'</div><div class="reason">'+d.reason+'</div></div>';}
-      document.getElementById('enemies').innerHTML=s.enemies.map(e=>'<div class="enemy"><div class="name">'+e.name+(e.poison>0?' <span style="color:#66bb6a">毒'+e.poison+'</span>':'')+'</div><div class="hp-bar"><div class="hp-fill" style="width:'+(e.hp/e.max_hp*100).toFixed(0)+'%"></div></div><div style="font-size:12px;color:#aaa">'+e.hp+'/'+e.max_hp+' HP '+(e.block>0?'🛡'+e.block:'')+'</div><div class="intent">意图: '+(e.intent_type||'?')+' '+(e.intent_damage>0?'伤害'+e.intent_damage:'')+' '+(e.is_aoe?'(AOE)':'')+'</div></div>').join('');
-      document.getElementById('hand').innerHTML=s.hand.map(c=>'<div class="card-item '+(c.playable?'playable':'unplayable')+'"><span class="cost">'+c.cost+'</span>'+c.name+'</div>').join('');
-      document.getElementById('alts').innerHTML=(d.ranked||[]).slice(1).map(a=>'<div class="alt-item"><span>'+a.action.label+'</span><span class="val">胜率'+(a.value*100).toFixed(0)+'% ('+a.visits+'次)</span></div>').join('')||'<span style="color:#666">无</span>';
-      if(d.draw_order&&d.draw_order.length){document.getElementById('drawOrder').innerHTML='已知牌序: '+d.draw_order.map((c,i)=>'<span class="known">'+(i+1)+'.'+c+'</span>').join(' → ');}
-    }else if(d.phase==='map'||d.phase==='reward'||d.phase==='shop'){
-      document.getElementById('recContent').innerHTML='<div class="rec-card"><div class="action">'+d.phase+'推荐</div><div class="reason">'+JSON.stringify(d.recommendation||{}).substring(0,200)+'</div></div>';
+let lastHash='';
+function refresh(){
+  fetch('/api/live').then(r=>r.json()).then(d=>{
+    if(d.error||!d.connected){
+      document.getElementById('liveContent').innerHTML='<div class="disconnected"><div class="icon">🎮</div><h2>等待游戏连接...</h2><p>请确保游戏已启动，本地Agent正在运行</p></div>';
+      return;
     }
-  }catch(e){
-    document.getElementById('connStatus').textContent='未连接';document.getElementById('connStatus').className='status offline';
-    document.getElementById('recContent').innerHTML='<p style="color:#8899aa">等待游戏启动...</p>';
-  }
+    const hash=JSON.stringify(d).length+d.phase+d.floor;
+    if(hash===lastHash)return;lastHash=hash;
+    let html='';
+    html+='<div class="status-panel"><div class="status-row">';
+    html+='<span class="phase-badge phase-'+d.phase+'">'+d.phase_name+'</span>';
+    html+='<span class="status-item hp"><span class="icon">❤️</span>'+(d.hp||0)+'/'+(d.max_hp||70)+'</span>';
+    html+='<span class="status-item gold"><span class="icon">🪙</span>'+(d.gold||0)+'</span>';
+    html+='<span class="status-item floor"><span class="icon">🏔️</span>楼层 '+(d.floor||0)+'</span>';
+    html+='<span class="status-item"><span class="icon">🃏</span>'+(d.deck_size||0)+'张</span>';
+    html+='</div></div>';
+    if(d.monsters&&d.monsters.length){
+      html+='<div class="monster-panel"><h4>👹 敌人 ('+d.monsters.length+')</h4>';
+      d.monsters.forEach(m=>{
+        html+='<div style="margin-bottom:8px;"><strong style="color:var(--text-cream);">'+m.name+'</strong> '+(m.hp?'<span style="color:var(--red-light);">'+m.hp+'HP</span>':'');
+        if(m.intent)html+=' <span class="monster-intent">'+m.intent+'</span>';
+        html+='</div>';
+      });
+      html+='</div>';
+    }
+    if(d.recommendations&&d.recommendations.length){
+      html+='<div class="recommendation"><h3>✨ AI推荐</h3>';
+      d.recommendations.forEach((r,i)=>{
+        html+='<div class="rec-item">'+(i+1)+'. '+r.action+' <span class="score">'+r.score.toFixed(1)+'</span></div>';
+      });
+      html+='</div>';
+    }
+    if(d.draw_pile&&d.draw_pile.length){
+      html+='<div class="deck-panel"><h4>📚 抽牌堆 ('+d.draw_pile.length+')</h4><div class="draw-pile">';
+      d.draw_pile.forEach(c=>{html+='<span class="draw-card">'+c+'</span>';});
+      html+='</div></div>';
+    }
+    document.getElementById('liveContent').innerHTML=html;
+  }).catch(()=>{});
 }
-setInterval(update,1500);update();
+refresh();setInterval(refresh,3000);
 </script>
 </body></html>"""
 
 HISTORY_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>历史对局 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
-.topbar{background:#1a2a3a;padding:12px 20px;border-bottom:1px solid #2d4a6a;}
-.topbar a{color:#4fc3f7;text-decoration:none;}
-.container{max-width:800px;margin:0 auto;padding:16px;}
-.run-item{background:#1a2a3a;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #2d4a6a;cursor:pointer;transition:all .2s;display:flex;justify-content:space-between;align-items:center;}
-.run-item:hover{border-color:#4fc3f7;}
-.run-item .info{flex:1;}
-.run-item .date{color:#8899aa;font-size:12px;}
-.run-item .meta{margin-top:6px;font-size:14px;}
-.run-item .meta span{margin-right:16px;}
-.run-item .result{padding:4px 12px;border-radius:12px;font-size:12px;}
-.win{background:#1b5e20;color:#66bb6a;}.lose{background:#b71c1c;color:#ef5350;}
-.empty{text-align:center;padding:60px;color:#556677;}
+.history-container{max-width:1000px;margin:0 auto;padding:20px;}
+.history-item{background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:8px;padding:16px 20px;margin-bottom:12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px;}
+.history-item:hover{border-color:var(--gold);transform:translateX(4px);}
+.history-item .char-icon{width:48px;height:48px;background:linear-gradient(135deg,#2a4a2a,#1a3a1a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;border:2px solid var(--silent);flex-shrink:0;}
+.history-item .info{flex:1;min-width:0;}
+.history-item .title{color:var(--gold);font-size:16px;font-weight:600;margin-bottom:4px;}
+.history-item .meta{color:var(--text-gray);font-size:13px;display:flex;gap:14px;flex-wrap:wrap;}
+.history-item .result{padding:4px 12px;border-radius:3px;font-size:13px;font-weight:600;flex-shrink:0;}
+.result-win{background:rgba(90,138,74,.2);color:var(--green-bright);border:1px solid var(--green);}
+.result-lose{background:rgba(184,64,64,.2);color:var(--red-light);border:1px solid var(--red);}
+.result-ongoing{background:rgba(74,122,184,.2);color:var(--blue-light);border:1px solid var(--blue);}
+.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.empty{text-align:center;padding:60px;color:var(--text-dim);}
+.empty .icon{font-size:48px;margin-bottom:12px;}
 </style></head>
 <body>
-<div class="topbar"><a href="/">← 返回首页</a> | 历史对局</div>
-<div class="container"><div id="runs"><div class="empty">加载中...</div></div></div>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+  <a href="/live">当前对局</a><a href="/history" class="active">历史对局</a>
+  <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+</div></div>
+<div class="page-header"><h1>📊 历史对局</h1><p>查看所有对局记录 · 战略复盘分析</p></div>
+<div class="history-container">
+  <div class="filters">
+    <button class="filter-btn active" onclick="filterHistory('all',this)">全部</button>
+    <button class="filter-btn" onclick="filterHistory('win',this)">胜利</button>
+    <button class="filter-btn" onclick="filterHistory('lose',this)">失败</button>
+  </div>
+  <div id="historyList"><div class="empty"><div class="icon">📜</div>暂无对局记录<br><span style="font-size:13px;">开始游戏后自动记录</span></div></div>
+</div>
 <script>
+let allRuns=[];
 fetch('/api/history').then(r=>r.json()).then(d=>{
-  const el=document.getElementById('runs');
-  if(!d.runs.length){el.innerHTML='<div class="empty">暂无对局记录<br><small>完成一局后会自动保存</small></div>';return;}
-  el.innerHTML=d.runs.map(r=>'<div class="run-item" onclick="location.href=\'/replay/'+r.id+'\'"><div class="info"><div class="date">'+r.date+'</div><div class="meta"><span>进阶'+r.ascension+'</span><span>'+r.character+'</span><span>楼层'+r.floor+'</span><span>'+r.deck_size+'张牌</span><span>'+r.relics+'遗物</span></div></div><span class="result '+(r.result==='胜利'?'win':'lose')+'">'+r.result+'</span></div>').join('');
+  allRuns=d.runs||[];
+  renderHistory('all');
+}).catch(()=>{
+  document.getElementById('historyList').innerHTML='<div class="empty"><div class="icon">⚠️</div>请先登录后查看历史记录</div>';
 });
+function filterHistory(type,btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderHistory(type);
+}
+function renderHistory(type){
+  let list=allRuns;
+  if(type==='win')list=list.filter(r=>r.result==='胜利'||r.result==='win');
+  if(type==='lose')list=list.filter(r=>r.result==='失败'||r.result==='lose');
+  const el=document.getElementById('historyList');
+  if(!list.length){el.innerHTML='<div class="empty"><div class="icon">📜</div>暂无对局记录</div>';return;}
+  el.innerHTML=list.map(r=>{
+    const resultCls=r.result==='胜利'||r.result==='win'?'result-win':(r.result==='失败'||r.result==='lose'?'result-lose':'result-ongoing');
+    return '<div class="history-item" onclick="location.href='/replay/'+r.id+''">'+
+      '<div class="char-icon">🐍</div>'+
+      '<div class="info"><div class="title">静默猎手 · 进阶'+(r.ascension||0)+'</div>'+
+      '<div class="meta"><span>❤️ '+(r.current_hp||0)+'/'+(r.max_hp||70)+'</span><span>🪙 '+(r.gold||0)+'</span><span>🏔️ '+(r.max_floor||0)+'层</span><span>🃏 '+(r.deck_size||0)+'张</span><span>'+(r.date||'')+'</span></div></div>'+
+      '<span class="result '+resultCls+'">'+(r.result||'进行中')+'</span></div>';
+  }).join('');
+}
 </script>
 </body></html>"""
 
 MONSTERS_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>怪物图鉴 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
-.topbar{background:#1a2a3a;padding:12px 20px;border-bottom:1px solid #2d4a6a;}
-.topbar a{color:#4fc3f7;text-decoration:none;}
-.container{max-width:1000px;margin:0 auto;padding:16px;}
-.stats-bar{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;}
-.stat-item{background:#1a2a3a;padding:8px 16px;border-radius:8px;border:1px solid #2d4a6a;}
-.stat-item .num{font-size:20px;font-weight:bold;color:#4fc3f7;}
-.stat-item .label{font-size:11px;color:#8899aa;}
-.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-.filter-btn{padding:6px 14px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:20px;color:#8899aa;cursor:pointer;font-size:13px;}
-.filter-btn.active{background:#4fc3f7;color:#000;border-color:#4fc3f7;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
-.monster{background:#1a2a3a;border-radius:10px;padding:12px;border:1px solid #2d4a6a;cursor:pointer;transition:all .2s;text-align:center;}
-.monster:hover{border-color:#4fc3f7;background:#1f3347;transform:translateY(-3px);box-shadow:0 4px 12px rgba(79,195,247,.2);}
-.monster-img{width:80px;height:80px;object-fit:contain;margin:0 auto 8px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
-.monster-img-fallback{width:80px;height:80px;margin:0 auto 8px;background:#2d4a6a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;}
-.monster h3{color:#ef9a9a;margin-bottom:4px;font-size:15px;}
-.monster .type-tag{font-size:10px;padding:2px 8px;border-radius:10px;background:#2d4a6a;color:#8899aa;display:inline-block;margin-bottom:6px;}
-.monster .type-tag.boss{background:#8b0000;color:#ffaaaa;}
-.monster .type-tag.elite{background:#8b6914;color:#ffd700;}
-.monster .hp{color:#8899aa;font-size:12px;}
-.monster .act-tag{font-size:10px;color:#667788;margin-top:4px;}
-/* 详情弹窗 */
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:100;justify-content:center;align-items:center;padding:20px;}
-.modal-overlay.show{display:flex;}
-.modal{background:#1a2a3a;border-radius:12px;padding:24px;max-width:550px;width:100%;max-height:85vh;overflow-y:auto;border:2px solid #4fc3f7;}
-.modal-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
-.modal-img{width:100px;height:100px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));}
-.modal-img-fallback{width:100px;height:100px;background:#2d4a6a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;}
-.modal-title h2{color:#ef9a9a;margin-bottom:4px;}
-.modal-title .meta{color:#8899aa;font-size:13px;}
-.modal .close-btn{float:right;background:none;border:none;color:#8899aa;font-size:24px;cursor:pointer;}
-.modal .detail-row{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #2d4a6a;}
-.modal .detail-label{color:#8899aa;font-size:12px;margin-bottom:4px;}
-.modal .detail-value{color:#e0e6ed;font-size:14px;}
-.modal .move-item{padding:8px 0;border-bottom:1px solid #2d4a6a;}
-.modal .move-name{color:#ffcc80;font-weight:bold;}
-.modal .move-desc{color:#aaa;font-size:13px;margin-top:2px;}
-.modal .tip-box{background:rgba(76,175,80,.1);border-left:3px solid #4caf50;padding:10px;margin-top:12px;border-radius:4px;}
-.modal .tip-box .label{color:#4caf50;font-size:12px;font-weight:bold;margin-bottom:4px;}
-.empty{text-align:center;padding:60px;color:#556677;grid-column:1/-1;}
+.empty{text-align:center;padding:40px;color:var(--text-dim);}
 </style></head>
 <body>
-<div class="topbar"><a href="/">← 返回首页</a> | 怪物图鉴</div>
-<div class="container">
-  <div class="stats-bar" id="stats"></div>
-  <div class="filters" id="filters">
-    <button class="filter-btn active" data-act="all">全部</button>
-    <button class="filter-btn" data-act="密林">密林</button>
-    <button class="filter-btn" data-act="巢穴">巢穴</button>
-    <button class="filter-btn" data-act="荣耀">荣耀</button>
-    <button class="filter-btn" data-act="暗港">暗港</button>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+  <a href="/live">当前对局</a><a href="/history">历史对局</a>
+  <a href="/monsters" class="active">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+</div></div>
+<div class="page-header"><h1>👹 怪物图鉴</h1><p>所有怪物的固定行为模式 · 伤害数值 · 应对策略</p></div>
+<div class="monster-layout">
+  <div class="monster-actions">
+    <h3>行动列表</h3>
+    <div id="actions"><div class="empty" style="padding:20px;font-size:13px;">选择怪物查看行动</div></div>
   </div>
-  <div class="grid" id="grid"><div class="empty">加载中...</div></div>
-</div>
-<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <button class="close-btn" onclick="closeModal()">×</button>
-    <div id="modal-content"></div>
+  <div class="monster-display" id="display">
+    <div style="color:var(--text-dim);font-size:16px;">← 从右侧选择怪物</div>
   </div>
+  <div class="monster-list" id="list"></div>
 </div>
 <script>
 let allMonsters=[];
-let currentFilter='all';
 fetch('/api/monsters').then(r=>r.json()).then(d=>{
   allMonsters=d.monsters||[];
-  renderStats();
-  renderMonsters();
+  renderList();
+  if(allMonsters.length)selectMonster(allMonsters[0].id);
 });
-function renderStats(){
-  const acts={};
-  allMonsters.forEach(m=>{acts[m.act]=(acts[m.act]||0)+1;});
-  document.getElementById('stats').innerHTML=
-    '<div class="stat-item"><div class="num">'+allMonsters.length+'</div><div class="label">怪物总数</div></div>'+
-    Object.entries(acts).map(([a,n])=>'<div class="stat-item"><div class="num">'+n+'</div><div class="label">'+a+'</div></div>').join('');
+function renderList(){
+  const chapters={};
+  allMonsters.forEach(m=>{const c=m.chapter||'未知';if(!chapters[c])chapters[c]=[];chapters[c].push(m);});
+  let html='';
+  Object.entries(chapters).forEach(([ch,monsters])=>{
+    html+='<div class="monster-chapter"><div class="monster-chapter-title">'+ch+' ('+monsters.length+')</div>';
+    monsters.forEach(m=>{
+      const cls=m.is_elite?'elite':(m.is_boss?'boss':'');
+      html+='<div class="monster-list-item '+cls+'" data-id="'+m.id+'" onclick="selectMonster(''+m.id+'')">'+
+        (m.image_url?'<img src="'+m.image_url+'" style="width:24px;height:24px;object-fit:contain;">':'👹')+m.name+'</div>';
+    });
+    html+='</div>';
+  });
+  document.getElementById('list').innerHTML=html;
 }
-document.getElementById('filters').addEventListener('click',e=>{
-  if(e.target.classList.contains('filter-btn')){
-    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-    e.target.classList.add('active');
-    currentFilter=e.target.dataset.act;
-    renderMonsters();
-  }
-});
-function monsterImg(m){
-  if(m.image_url)return '<img class="monster-img" src="'+m.image_url+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\\'<div class=\\\'monster-img-fallback\\\'>👾</div>\\'">';
-  return '<div class="monster-img-fallback">👾</div>';
+function selectMonster(id){
+  const m=allMonsters.find(x=>x.id===id);if(!m)return;
+  document.querySelectorAll('.monster-list-item').forEach(el=>el.classList.remove('selected'));
+  document.querySelector('[data-id="'+id+'"]')?.classList.add('selected');
+  document.getElementById('display').innerHTML=
+    (m.image_url?'<img src="'+m.image_url+'" onerror="this.style.display='none'">':'')+
+    '<div class="monster-name">'+m.name+'</div>'+
+    (m.hp?'<div class="monster-hp">❤️ '+m.hp+'</div>':'')+
+    (m.strategy?'<div style="margin-top:16px;padding:12px;background:rgba(90,138,74,.1);border-left:3px solid var(--green);border-radius:4px;max-width:400px;font-size:13px;color:var(--text-cream);line-height:1.6;"><strong style="color:var(--green-bright);">应对策略</strong><br>'+m.strategy+'</div>':'');
+  const actions=m.actions||[];
+  document.getElementById('actions').innerHTML=actions.length?
+    actions.map(a=>'<div class="monster-action-item"><div class="action-name">'+a.name+'</div>'+
+    (a.damage?'<div class="action-damage">伤害: '+a.damage+'</div>':'')+
+    (a.effect?'<div style="font-size:11px;color:var(--text-gray);margin-top:2px;">'+a.effect+'</div>':'')+'</div>').join('')
+    :'<div class="empty" style="padding:20px;font-size:13px;">暂无行动数据</div>';
 }
-function renderMonsters(){
-  const list=currentFilter==='all'?allMonsters:allMonsters.filter(m=>m.act===currentFilter);
-  const el=document.getElementById('grid');
-  if(!list.length){el.innerHTML='<div class="empty">暂无怪物数据</div>';return;}
-  el.innerHTML=list.map(m=>'<div class="monster" onclick="showDetail(\\''+(m.id||m.name)+'\\')">'+
-    monsterImg(m)+
-    '<h3>'+m.name+'</h3>'+
-    '<span class="type-tag '+m.type.toLowerCase()+'">'+m.type+'</span>'+
-    '<div class="hp">HP: '+m.hp_min+'-'+m.hp_max+'</div>'+
-    '<div class="act-tag">'+m.act+'</div>'+
-  '</div>').join('');
-}
-function showDetail(id){
-  const m=allMonsters.find(x=>(x.id||x.name)===id);
-  if(!m)return;
-  const img=m.image_url?'<img class="modal-img" src="'+m.image_url+'" alt="'+m.name+'" onerror="this.outerHTML=\\'<div class=\\\'modal-img-fallback\\\'>👾</div>\\'">':'<div class="modal-img-fallback">👾</div>';
-  const c=document.getElementById('modal-content');
-  c.innerHTML='<div class="modal-header">'+img+
-    '<div class="modal-title"><h2>'+m.name+'</h2><div class="meta">'+m.act+' · '+m.type+'</div></div></div>'+
-    '<div class="detail-row"><div class="detail-label">血量</div><div class="detail-value">'+m.hp_min+'-'+m.hp_max+(m.hp_asc_min?' (进阶: '+m.hp_asc_min+'-'+m.hp_asc_max+')':'')+'</div></div>'+
-    (m.abilities&&m.abilities.length?'<div class="detail-row"><div class="detail-label">初始能力</div><div class="detail-value">'+m.abilities.join(', ')+'</div></div>':'')+
-    '<div class="detail-row"><div class="detail-label">招式列表 ('+(m.moves||[]).length+')</div>'+
-    (m.moves||[]).map(mv=>'<div class="move-item"><div class="move-name">'+mv.name+'</div><div class="move-desc">'+mv.desc+(mv.damage?' · 伤害'+mv.damage+(mv.hits>1?'×'+mv.hits:''):'')+'</div></div>').join('')+'</div>'+
-    (m.tip?'<div class="tip-box"><div class="label">应对策略</div><div>'+m.tip+'</div></div>':'');
-  document.getElementById('modal').classList.add('show');
-}
-function closeModal(){document.getElementById('modal').classList.remove('show');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 </script>
 </body></html>"""
 
 CARDS_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>卡牌图鉴 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
-.topbar{background:#1a2a3a;padding:12px 20px;border-bottom:1px solid #2d4a6a;}
-.topbar a{color:#4fc3f7;text-decoration:none;}
-.container{max-width:1200px;margin:0 auto;padding:16px;}
-.stats-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-.stat-item{background:#1a2a3a;padding:8px 14px;border-radius:8px;border:1px solid #2d4a6a;}
-.stat-item .num{font-size:18px;font-weight:bold;color:#4fc3f7;}
-.stat-item .label{font-size:11px;color:#8899aa;}
-.search-box{margin-bottom:12px;}
-.search-box input{width:100%;padding:10px 16px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:8px;color:#e0e6ed;font-size:14px;}
-.search-box input:focus{outline:none;border-color:#4fc3f7;}
-.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-.filter-btn{padding:6px 14px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:20px;color:#8899aa;cursor:pointer;font-size:13px;}
-.filter-btn.active{background:#4fc3f7;color:#000;border-color:#4fc3f7;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
-.card{background:#1a2a3a;border-radius:10px;padding:10px;border:1px solid #2d4a6a;cursor:pointer;transition:all .2s;}
-.card:hover{border-color:#4fc3f7;background:#1f3347;transform:translateY(-3px);box-shadow:0 4px 12px rgba(79,195,247,.2);}
-.card-img{width:100%;border-radius:6px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
-.card-img-fallback{width:100%;height:120px;background:linear-gradient(135deg,#2d4a6a,#1a2a3a);border-radius:6px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:36px;}
-.card .name{color:#4fc3f7;font-weight:bold;margin-bottom:4px;font-size:14px;display:flex;align-items:center;gap:6px;}
-.card .cost{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;background:#4fc3f7;border-radius:50%;font-size:12px;color:#000;font-weight:bold;flex-shrink:0;}
-.card .rarity{font-size:10px;padding:1px 6px;border-radius:8px;margin-left:auto;}
-.card .rarity.基础{background:#666;color:#fff;}
-.card .rarity.普通{background:#555;color:#fff;}
-.card .rarity.罕见{background:#4a7c4a;color:#fff;}
-.card .rarity.稀有{background:#b8860b;color:#fff;}
-.card .rarity.先古{background:#8b008b;color:#fff;}
-.card .type{font-size:11px;color:#8899aa;margin-bottom:4px;}
-.card .effect{color:#aaa;font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-/* 详情弹窗 */
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:100;justify-content:center;align-items:center;padding:20px;}
-.modal-overlay.show{display:flex;}
-.modal{background:#1a2a3a;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;border:2px solid #4fc3f7;}
-.modal-header{display:flex;gap:16px;margin-bottom:16px;}
-.modal-card-img{width:180px;flex-shrink:0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.5);}
-.modal-card-img-fallback{width:180px;height:250px;background:linear-gradient(135deg,#2d4a6a,#1a2a3a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:60px;flex-shrink:0;}
-.modal-info{flex:1;}
-.modal h2{color:#4fc3f7;margin-bottom:8px;font-size:20px;}
-.modal .close-btn{position:absolute;top:16px;right:16px;background:none;border:none;color:#8899aa;font-size:24px;cursor:pointer;z-index:10;}
-.modal .detail-row{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #2d4a6a;}
-.modal .detail-label{color:#8899aa;font-size:12px;margin-bottom:4px;}
-.modal .detail-value{color:#e0e6ed;font-size:14px;line-height:1.6;}
-.modal .synergy-box{background:rgba(76,175,80,.1);border-left:3px solid #4caf50;padding:10px;margin-top:12px;border-radius:4px;}
-.modal .synergy-box .label{color:#4caf50;font-size:12px;font-weight:bold;margin-bottom:4px;}
-.modal .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
-.modal .tag{font-size:11px;padding:2px 8px;background:#2d4a6a;border-radius:10px;color:#8899aa;}
-.empty{text-align:center;padding:60px;color:#556677;grid-column:1/-1;}
+.stats-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;max-width:1400px;margin-left:auto;margin-right:auto;padding:0 20px;}
+.stat-item{background:linear-gradient(180deg,#2a2018,#1a120c);padding:8px 16px;border-radius:4px;border:1px solid #4a3a25;text-align:center;}
+.stat-item .num{font-size:20px;font-weight:700;color:var(--gold);font-family:'Cinzel',serif;}
+.stat-item .label{font-size:11px;color:var(--text-gray);margin-top:2px;}
+.empty{text-align:center;padding:60px;color:var(--text-dim);grid-column:1/-1;font-size:16px;}
 </style></head>
 <body>
-<div class="topbar"><a href="/">← 返回首页</a> | 卡牌图鉴（静默猎手）</div>
-<div class="container">
-  <div class="stats-bar" id="stats"></div>
-  <div class="search-box"><input type="text" id="search" placeholder="搜索卡牌名称、效果或标签..." oninput="renderCards()"></div>
-  <div class="filters" id="filters">
-    <button class="filter-btn active" data-filter="all">全部</button>
-    <button class="filter-btn" data-filter="基础">基础</button>
-    <button class="filter-btn" data-filter="普通">普通</button>
-    <button class="filter-btn" data-filter="罕见">罕见</button>
-    <button class="filter-btn" data-filter="稀有">稀有</button>
-    <button class="filter-btn" data-filter="先古">先古</button>
-    <button class="filter-btn" data-filter="攻击">攻击</button>
-    <button class="filter-btn" data-filter="技能">技能</button>
-    <button class="filter-btn" data-filter="能力">能力</button>
-  </div>
-  <div class="grid" id="grid"></div>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+  <a href="/live">当前对局</a><a href="/history">历史对局</a>
+  <a href="/monsters">怪物图鉴</a><a href="/cards" class="active">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+</div></div>
+<div class="page-header"><h1>🃏 卡牌图鉴</h1><p>静默猎手 · 全卡牌效果与升级对比</p></div>
+<div class="filter-bar">
+  <input type="text" class="search-input" id="search" placeholder="搜索卡牌名称、效果..." oninput="renderCards()">
+  <button class="filter-btn active" data-filter="all">全部</button>
+  <button class="filter-btn" data-filter="攻击">攻击</button>
+  <button class="filter-btn" data-filter="技能">技能</button>
+  <button class="filter-btn" data-filter="能力">能力</button>
+  <button class="filter-btn" data-filter="基础">基础</button>
+  <button class="filter-btn" data-filter="普通">普通</button>
+  <button class="filter-btn" data-filter="罕见">罕见</button>
+  <button class="filter-btn" data-filter="稀有">稀有</button>
 </div>
+<div class="stats-bar" id="stats"></div>
+<div class="codex-section"><div class="card-grid-codex" id="grid"></div></div>
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal" style="position:relative;">
-    <button class="close-btn" onclick="closeModal()">×</button>
-    <div id="modal-content"></div>
-  </div>
+  <div class="modal-box"><button class="close-btn" onclick="closeModal()">×</button><div id="modal-content"></div></div>
 </div>
 <script>
-let allCards=[];
-let currentFilter='all';
-fetch('/api/cards').then(r=>r.json()).then(d=>{
-  allCards=d.cards||[];
-  renderStats();
-  renderCards();
-});
+let allCards=[],currentFilter='all';
+fetch('/api/cards').then(r=>r.json()).then(d=>{allCards=d.cards||[];renderStats();renderCards();});
 function renderStats(){
-  const s={};
-  allCards.forEach(c=>{s[c.rarity]=(s[c.rarity]||0)+1;});
-  document.getElementById('stats').innerHTML=
-    '<div class="stat-item"><div class="num">'+allCards.length+'</div><div class="label">卡牌总数</div></div>'+
+  const s={};allCards.forEach(c=>{s[c.rarity]=(s[c.rarity]||0)+1;});
+  document.getElementById('stats').innerHTML='<div class="stat-item"><div class="num">'+allCards.length+'</div><div class="label">卡牌总数</div></div>'+
     Object.entries(s).map(([r,n])=>'<div class="stat-item"><div class="num">'+n+'</div><div class="label">'+r+'</div></div>').join('');
 }
-document.getElementById('filters').addEventListener('click',e=>{
+document.getElementById('filters')?.addEventListener('click',e=>{});
+document.querySelector('.filter-bar').addEventListener('click',e=>{
   if(e.target.classList.contains('filter-btn')){
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-    e.target.classList.add('active');
-    currentFilter=e.target.dataset.filter;
-    renderCards();
+    e.target.classList.add('active');currentFilter=e.target.dataset.filter;renderCards();
   }
 });
-function cardImg(c,cls){
-  if(c.image_url)return '<img class="'+cls+'" src="'+c.image_url+'" alt="'+c.name_cn+'" onerror="this.outerHTML=\\'<div class=\\''+cls+'-fallback\\'>🃏</div>\\'">';
-  return '<div class="'+cls+'-fallback">🃏</div>';
-}
+function typeClass(t){if(t==='攻击')return'type-attack';if(t==='技能')return'type-skill';if(t==='能力')return'type-power';if(t==='诅咒')return'type-curse';return'';}
 function renderCards(){
   const q=document.getElementById('search').value.toLowerCase();
   let list=allCards;
-  if(currentFilter!=='all'){
-    list=list.filter(c=>c.rarity===currentFilter||c.type===currentFilter);
-  }
-  if(q){
-    list=list.filter(c=>
-      c.name_cn.toLowerCase().includes(q)||
-      c.name_en.toLowerCase().includes(q)||
-      c.effect.toLowerCase().includes(q)||
-      (c.tags||[]).some(t=>t.toLowerCase().includes(q))
-    );
-  }
+  if(currentFilter!=='all')list=list.filter(c=>c.rarity===currentFilter||c.type===currentFilter);
+  if(q)list=list.filter(c=>c.name_cn.toLowerCase().includes(q)||c.name_en.toLowerCase().includes(q)||c.effect.toLowerCase().includes(q));
   const el=document.getElementById('grid');
   if(!list.length){el.innerHTML='<div class="empty">未找到卡牌</div>';return;}
-  el.innerHTML=list.map(c=>'<div class="card" onclick="showDetail(\\''+c.id+'\\')">'+
-    cardImg(c,'card-img')+
-    '<div class="name"><span class="cost">'+c.cost+'</span>'+c.name_cn+
-    '<span class="rarity '+c.rarity+'">'+c.rarity+'</span></div>'+
-    '<div class="type">'+c.type+'</div>'+
-    '<div class="effect">'+c.effect+'</div>'+
-  '</div>').join('');
+  el.innerHTML=list.map(c=>'<div class="game-card '+typeClass(c.type)+'" onclick="showDetail(\''+c.id+'\')">'+
+    '<div class="card-cost">'+c.cost+'</div>'+
+    (c.image_url?'<img class="card-image" src="'+c.image_url+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">':'')+
+    '<div class="card-image" style="display:none;align-items:center;justify-content:center;font-size:48px;">🃏</div>'+
+    '<div class="card-name-ribbon"><div class="card-name">'+c.name_cn+'</div></div>'+
+    '<div class="card-type">'+c.type+' · '+c.rarity+'</div>'+
+    '<div class="card-desc">'+c.effect+'</div></div>').join('');
 }
 function showDetail(id){
-  const c=allCards.find(x=>x.id===id);
-  if(!c)return;
-  const c2=document.getElementById('modal-content');
-  c2.innerHTML='<div class="modal-header">'+cardImg(c,'modal-card-img')+
-    '<div class="modal-info">'+
-    '<h2><span class="cost" style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:#4fc3f7;border-radius:50%;font-size:14px;color:#000;margin-right:8px;">'+c.cost+'</span>'+c.name_cn+'</h2>'+
-    '<div class="detail-row"><div class="detail-label">英文名</div><div class="detail-value">'+c.name_en+'</div></div>'+
-    '<div class="detail-row"><div class="detail-label">类型 / 稀有度</div><div class="detail-value">'+c.type+' · '+c.rarity+'</div></div>'+
-    '<div class="detail-row"><div class="detail-label">效果</div><div class="detail-value">'+c.effect+'</div></div>'+
-    (c.upgraded?'<div class="detail-row"><div class="detail-label">升级效果</div><div class="detail-value">'+c.upgraded+'</div></div>':'')+
-    '<div class="tags">'+(c.tags||[]).map(t=>'<span class="tag">'+t+'</span>').join('')+'</div>'+
-    '</div></div>'+
-    (c.synergy?'<div class="synergy-box"><div class="label">流派适配</div><div>'+c.synergy+'</div></div>':'');
+  const c=allCards.find(x=>x.id===id);if(!c)return;
+  document.getElementById('modal-content').innerHTML=
+    '<h2>'+c.name_cn+' <span style="font-size:14px;color:var(--text-gray);">'+c.name_en+'</span></h2>'+
+    '<div style="display:flex;gap:20px;align-items:flex-start;">'+
+    (c.image_url?'<img src="'+c.image_url+'" style="width:160px;border-radius:6px;border:2px solid var(--gold-dark);">':'')+
+    '<div style="flex:1;">'+
+    '<div class="form-group"><label>费用</label><div style="color:var(--text-cream);font-size:18px;">'+c.cost+'</div></div>'+
+    '<div class="form-group"><label>类型 / 稀有度</label><div style="color:var(--text-cream);">'+c.type+' · '+c.rarity+'</div></div>'+
+    '<div class="form-group"><label>效果</label><div style="color:var(--text-cream);line-height:1.7;">'+c.effect+'</div></div>'+
+    (c.upgraded?'<div class="form-group"><label>升级效果</label><div style="color:var(--green-bright);line-height:1.7;">'+c.upgraded+'</div></div>':'')+
+    (c.synergy?'<div class="form-group"><label>流派适配</label><div style="color:var(--text-cream);line-height:1.7;">'+c.synergy+'</div></div>':'')+
+    '</div></div>';
   document.getElementById('modal').classList.add('show');
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');}
@@ -1187,140 +1112,80 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 RELICS_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>遗物图鉴 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
-.topbar{background:#1a2a3a;padding:12px 20px;border-bottom:1px solid #2d4a6a;}
-.topbar a{color:#4fc3f7;text-decoration:none;}
-.container{max-width:1200px;margin:0 auto;padding:16px;}
-.stats-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
-.stat-item{background:#1a2a3a;padding:8px 14px;border-radius:8px;border:1px solid #2d4a6a;}
-.stat-item .num{font-size:18px;font-weight:bold;color:#ffd700;}
-.stat-item .label{font-size:11px;color:#8899aa;}
-.search-box{margin-bottom:12px;}
-.search-box input{width:100%;padding:10px 16px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:8px;color:#e0e6ed;font-size:14px;}
-.search-box input:focus{outline:none;border-color:#ffd700;}
-.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-.filter-btn{padding:6px 14px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:20px;color:#8899aa;cursor:pointer;font-size:13px;}
-.filter-btn.active{background:#ffd700;color:#000;border-color:#ffd700;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}
-.relic{background:#1a2a3a;border-radius:10px;padding:12px;border:1px solid #2d4a6a;cursor:pointer;transition:all .2s;text-align:center;}
-.relic:hover{border-color:#ffd700;background:#1f3347;transform:translateY(-3px);box-shadow:0 4px 12px rgba(255,215,0,.2);}
-.relic-img{width:64px;height:64px;object-fit:contain;margin:0 auto 8px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
-.relic-img-fallback{width:64px;height:64px;margin:0 auto 8px;background:linear-gradient(135deg,#8b6914,#5a4510);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;}
-.relic h3{color:#ffd700;margin-bottom:4px;font-size:14px;}
-.relic .rarity{font-size:10px;padding:2px 8px;border-radius:10px;display:inline-block;margin-bottom:6px;}
-.relic .rarity.初始{background:#666;color:#fff;}
-.relic .rarity.普通{background:#555;color:#fff;}
-.relic .rarity.罕见{background:#4a7c4a;color:#fff;}
-.relic .rarity.稀有{background:#b8860b;color:#fff;}
-.relic .rarity.Boss{background:#8b0000;color:#ffaaaa;}
-.relic .rarity.商店{background:#4a6a8a;color:#fff;}
-.relic .rarity.事件{background:#6a4a8a;color:#fff;}
-.relic .pool{font-size:11px;color:#8899aa;margin-bottom:4px;}
-.relic .effect{color:#aaa;font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
-/* 详情弹窗 */
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:100;justify-content:center;align-items:center;padding:20px;}
-.modal-overlay.show{display:flex;}
-.modal{background:#1a2a3a;border-radius:12px;padding:24px;max-width:550px;width:100%;max-height:85vh;overflow-y:auto;border:2px solid #ffd700;position:relative;}
-.modal-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
-.modal-relic-img{width:80px;height:80px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));}
-.modal-relic-img-fallback{width:80px;height:80px;background:linear-gradient(135deg,#8b6914,#5a4510);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;}
-.modal-title h2{color:#ffd700;margin-bottom:4px;}
-.modal-title .meta{color:#8899aa;font-size:13px;}
-.modal .close-btn{position:absolute;top:16px;right:16px;background:none;border:none;color:#8899aa;font-size:24px;cursor:pointer;z-index:10;}
-.modal .detail-row{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #2d4a6a;}
-.modal .detail-label{color:#8899aa;font-size:12px;margin-bottom:4px;}
-.modal .detail-value{color:#e0e6ed;font-size:14px;line-height:1.6;}
-.modal .synergy-box{background:rgba(255,215,0,.1);border-left:3px solid #ffd700;padding:10px;margin-top:12px;border-radius:4px;}
-.modal .synergy-box .label{color:#ffd700;font-size:12px;font-weight:bold;margin-bottom:4px;}
-.empty{text-align:center;padding:60px;color:#556677;grid-column:1/-1;}
+.stats-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;max-width:1400px;margin-left:auto;margin-right:auto;padding:0 20px;}
+.stat-item{background:linear-gradient(180deg,#2a2018,#1a120c);padding:8px 16px;border-radius:4px;border:1px solid #4a3a25;text-align:center;}
+.stat-item .num{font-size:20px;font-weight:700;color:var(--gold);font-family:'Cinzel',serif;}
+.stat-item .label{font-size:11px;color:var(--text-gray);margin-top:2px;}
+.empty{text-align:center;padding:60px;color:var(--text-dim);grid-column:1/-1;font-size:16px;}
 </style></head>
 <body>
-<div class="topbar"><a href="/">← 返回首页</a> | 遗物图鉴</div>
-<div class="container">
-  <div class="stats-bar" id="stats"></div>
-  <div class="search-box"><input type="text" id="search" placeholder="搜索遗物名称或效果..." oninput="renderRelics()"></div>
-  <div class="filters" id="filters">
-    <button class="filter-btn active" data-filter="all">全部</button>
-    <button class="filter-btn" data-filter="silent">静默猎手</button>
-    <button class="filter-btn" data-filter="shared">共享</button>
-    <button class="filter-btn" data-filter="初始">初始</button>
-    <button class="filter-btn" data-filter="普通">普通</button>
-    <button class="filter-btn" data-filter="罕见">罕见</button>
-    <button class="filter-btn" data-filter="稀有">稀有</button>
-    <button class="filter-btn" data-filter="古代">古代</button>
-    <button class="filter-btn" data-filter="Boss">Boss</button>
-  </div>
-  <div class="grid" id="grid"></div>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+  <a href="/live">当前对局</a><a href="/history">历史对局</a>
+  <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
+  <a href="/relics" class="active">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+</div></div>
+<div class="page-header"><h1>🏺 遗物图鉴</h1><p>全遗物效果 · 稀有度 · 流派适配</p></div>
+<div class="filter-bar">
+  <input type="text" class="search-input" id="search" placeholder="搜索遗物名称或效果..." oninput="renderRelics()">
+  <button class="filter-btn active" data-filter="all">全部</button>
+  <button class="filter-btn" data-filter="silent">静默猎手</button>
+  <button class="filter-btn" data-filter="shared">共享</button>
+  <button class="filter-btn" data-filter="初始">初始</button>
+  <button class="filter-btn" data-filter="普通">普通</button>
+  <button class="filter-btn" data-filter="罕见">罕见</button>
+  <button class="filter-btn" data-filter="稀有">稀有</button>
+  <button class="filter-btn" data-filter="Boss">Boss</button>
 </div>
+<div class="stats-bar" id="stats"></div>
+<div class="codex-section"><div class="relic-grid" id="grid"></div></div>
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
-    <button class="close-btn" onclick="closeModal()">×</button>
-    <div id="modal-content"></div>
-  </div>
+  <div class="modal-box"><button class="close-btn" onclick="closeModal()">×</button><div id="modal-content"></div></div>
 </div>
 <script>
-let allRelics=[];
-let currentFilter='all';
-fetch('/api/relics').then(r=>r.json()).then(d=>{
-  allRelics=d.relics||[];
-  renderStats();
-  renderRelics();
-});
+let allRelics=[],currentFilter='all';
+fetch('/api/relics').then(r=>r.json()).then(d=>{allRelics=d.relics||[];renderStats();renderRelics();});
 function renderStats(){
-  const s={};
-  allRelics.forEach(r=>{s[r.rarity]=(s[r.rarity]||0)+1;});
-  document.getElementById('stats').innerHTML=
-    '<div class="stat-item"><div class="num">'+allRelics.length+'</div><div class="label">遗物总数</div></div>'+
+  const s={};allRelics.forEach(r=>{s[r.rarity]=(s[r.rarity]||0)+1;});
+  document.getElementById('stats').innerHTML='<div class="stat-item"><div class="num">'+allRelics.length+'</div><div class="label">遗物总数</div></div>'+
     Object.entries(s).map(([r,n])=>'<div class="stat-item"><div class="num">'+n+'</div><div class="label">'+r+'</div></div>').join('');
 }
-document.getElementById('filters').addEventListener('click',e=>{
+document.querySelector('.filter-bar').addEventListener('click',e=>{
   if(e.target.classList.contains('filter-btn')){
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-    e.target.classList.add('active');
-    currentFilter=e.target.dataset.filter;
-    renderRelics();
+    e.target.classList.add('active');currentFilter=e.target.dataset.filter;renderRelics();
   }
 });
-function relicImg(r,cls){
-  if(r.image_url)return '<img class="'+cls+'" src="'+r.image_url+'" alt="'+r.name+'" onerror="this.outerHTML=\\'<div class=\\''+cls+'-fallback\\'>🏺</div>\\'">';
-  return '<div class="'+cls+'-fallback">🏺</div>';
+function rarityClass(r){
+  if(r==='初始')return'rarity-starter';if(r==='普通')return'rarity-common';
+  if(r==='罕见')return'rarity-uncommon';if(r==='稀有')return'rarity-rare';
+  if(r==='古代'||r==='先古')return'rarity-ancient';if(r==='Boss')return'rarity-boss';
+  return'rarity-common';
 }
 function renderRelics(){
   const q=document.getElementById('search').value.toLowerCase();
   let list=allRelics;
-  if(currentFilter!=='all'){
-    list=list.filter(r=>r.rarity===currentFilter||r.pool===currentFilter);
-  }
-  if(q){
-    list=list.filter(r=>
-      r.name.toLowerCase().includes(q)||
-      r.name_en.toLowerCase().includes(q)||
-      r.effect.toLowerCase().includes(q)||
-      (r.synergy&&r.synergy.toLowerCase().includes(q))
-    );
-  }
+  if(currentFilter!=='all')list=list.filter(r=>r.rarity===currentFilter||r.pool===currentFilter);
+  if(q)list=list.filter(r=>r.name.toLowerCase().includes(q)||r.name_en.toLowerCase().includes(q)||r.effect.toLowerCase().includes(q));
   const el=document.getElementById('grid');
   if(!list.length){el.innerHTML='<div class="empty">未找到遗物</div>';return;}
-  el.innerHTML=list.map(r=>'<div class="relic" onclick="showDetail(\\''+r.id+'\\')">'+
-    relicImg(r,'relic-img')+
-    '<h3>'+r.name+'</h3>'+
-    '<span class="rarity '+r.rarity+'">'+r.rarity+'</span>'+
-    '<div class="pool">'+(r.pool==='silent'?'静默猎手专属':'共享')+'</div>'+
-    '<div class="effect">'+r.effect+'</div>'+
-  '</div>').join('');
+  el.innerHTML=list.map(r=>'<div class="relic-item '+rarityClass(r.rarity)+'" onclick="showDetail(''+r.id+'')">'+
+    (r.image_url?'<img src="'+r.image_url+'" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">':'')+
+    '<div style="display:none;width:56px;height:56px;align-items:center;justify-content:center;font-size:32px;margin:0 auto 6px;">🏺</div>'+
+    '<div class="relic-name">'+r.name+'</div></div>').join('');
 }
 function showDetail(id){
-  const r=allRelics.find(x=>x.id===id);
-  if(!r)return;
-  const c=document.getElementById('modal-content');
-  c.innerHTML='<div class="modal-header">'+relicImg(r,'modal-relic-img')+
-    '<div class="modal-title"><h2>'+r.name+'</h2><div class="meta">'+r.name_en+' · '+r.rarity+' · '+(r.pool==='silent'?'静默猎手专属':'共享')+'</div></div></div>'+
-    '<div class="detail-row"><div class="detail-label">效果</div><div class="detail-value">'+r.effect+'</div></div>'+
-    (r.description?'<div class="detail-row"><div class="detail-label">说明</div><div class="detail-value">'+r.description+'</div></div>':'')+
-    (r.synergy?'<div class="synergy-box"><div class="label">流派适配</div><div>'+r.synergy+'</div></div>':'');
+  const r=allRelics.find(x=>x.id===id);if(!r)return;
+  document.getElementById('modal-content').innerHTML=
+    '<div style="display:flex;gap:20px;align-items:center;margin-bottom:16px;">'+
+    (r.image_url?'<img src="'+r.image_url+'" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));">':'')+
+    '<div><h2 style="margin:0;">'+r.name+'</h2><div style="color:var(--text-gray);font-size:13px;">'+r.name_en+' · '+r.rarity+' · '+(r.pool==='silent'?'静默猎手专属':'共享')+'</div></div></div>'+
+    '<div class="form-group"><label>效果</label><div style="color:var(--text-cream);line-height:1.7;">'+r.effect+'</div></div>'+
+    (r.description?'<div class="form-group"><label>说明</label><div style="color:var(--text-cream);line-height:1.7;">'+r.description+'</div></div>':'')+
+    (r.synergy?'<div class="form-group"><label>流派适配</label><div style="color:var(--green-bright);line-height:1.7;">'+r.synergy+'</div></div>':'');
   document.getElementById('modal').classList.add('show');
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');}
@@ -1331,56 +1196,59 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 REPLAY_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>对局历史 - STS2决策器</title>
+<link rel="stylesheet" href="/static/game-theme.css">
+<title>对局复盘 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Georgia',serif;background:linear-gradient(180deg,#1a0f0a,#0d0705);color:#e8dcc8;min-height:100vh;}
-.topbar{background:rgba(0,0,0,.6);padding:10px 20px;border-bottom:2px solid #8b6914;}
-.topbar a{color:#d4a843;text-decoration:none;font-size:14px;}
-.container{max-width:1100px;margin:0 auto;padding:20px;}
-.info-bar{display:flex;align-items:center;gap:20px;padding:16px;background:rgba(0,0,0,.4);border-radius:8px;margin-bottom:20px;flex-wrap:wrap;}
-.info-bar .char-icon{width:50px;height:50px;background:linear-gradient(135deg,#2d5a27,#1a3a18);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;border:2px solid #8b6914;}
-.info-bar .stat{display:flex;align-items:center;gap:6px;font-size:18px;}
-.info-bar .stat .icon{font-size:22px;}
-.info-bar .stat.hp{color:#ff6b6b;}
-.info-bar .stat.gold{color:#ffd700;}
-.info-bar .stat.floor{color:#87ceeb;}
-.info-bar .right{margin-left:auto;text-align:right;font-size:13px;color:#a89880;}
-.relic-section,.card-section,.analysis-section,.map-section{background:rgba(0,0,0,.3);border-radius:8px;padding:16px;margin-bottom:20px;}
-.section-title{font-size:18px;color:#d4a843;margin-bottom:12px;}
-.section-title .count{color:#a89880;font-size:14px;margin-left:8px;}
-.relic-grid{display:flex;flex-wrap:wrap;gap:8px;}
-.relic-item{width:48px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;background:rgba(255,255,255,.05);border:2px solid #555;position:relative;cursor:pointer;transition:transform .15s;}
-.relic-item:hover{transform:scale(1.1);}
-.relic-item .tooltip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#222;padding:6px 10px;border-radius:4px;font-size:12px;white-space:nowrap;display:none;z-index:10;border:1px solid #555;}
-.relic-item:hover .tooltip{display:block;}
-.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;}
-.card-item{background:linear-gradient(135deg,#1a2a1a,#0d1a0d);border:2px solid #4a6a4a;border-radius:8px;padding:10px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:all .15s;}
-.card-item:hover{border-color:#6a9a6a;transform:translateY(-2px);}
-.card-item .card-icon{width:32px;height:40px;background:rgba(255,255,255,.1);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
-.card-item .card-info{flex:1;min-width:0;}
-.card-item .card-name{font-size:13px;color:#e8dcc8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.card-item .card-count{font-size:11px;color:#888;}
-.card-item.rare{border-color:#ffd700;background:linear-gradient(135deg,#2a2a1a,#1a1a0d);}
-.card-item.uncommon{border-color:#4a9eff;background:linear-gradient(135deg,#1a2a3a,#0d1a2a);}
-.card-item.curse{border-color:#8b3a8b;background:linear-gradient(135deg,#2a1a2a,#1a0d1a);}
-.card-item.basic{border-color:#666;background:linear-gradient(135deg,#222,#111);}
-.analysis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px;}
-.analysis-item{background:rgba(255,255,255,.03);padding:12px;border-radius:6px;text-align:center;}
-.analysis-item .val{font-size:28px;font-weight:bold;color:#d4a843;}
-.analysis-item .lbl{font-size:12px;color:#888;margin-top:4px;}
-.suggestion{background:rgba(255,200,50,.1);border-left:3px solid #ffc832;padding:10px 14px;margin-bottom:8px;border-radius:0 6px 6px 0;}
-.suggestion.warning{background:rgba(255,100,100,.1);border-left-color:#ff6464;}
-.suggestion.info{background:rgba(100,150,255,.1);border-left-color:#6496ff;}
-.suggestion .title{font-weight:bold;color:#ffc832;margin-bottom:4px;}
-.suggestion.warning .title{color:#ff6464;}
-.suggestion.info .title{color:#6496ff;}
-.suggestion .content{font-size:13px;color:#ccc;line-height:1.5;}
-.loading{text-align:center;padding:60px;color:#666;font-size:16px;}
+body{font-family:'Kreon','Georgia',serif;}
+.replay-container{max-width:1100px;margin:0 auto;padding:20px;}
+.info-bar{display:flex;align-items:center;gap:20px;padding:16px 20px;background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:8px;margin-bottom:20px;flex-wrap:wrap;}
+.info-bar .char-icon{width:50px;height:50px;background:linear-gradient(135deg,#2a4a2a,#1a3a1a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;border:2px solid var(--silent);}
+.info-bar .stat{display:flex;align-items:center;gap:6px;font-size:17px;}
+.info-bar .stat .icon{font-size:20px;}
+.info-bar .stat.hp{color:var(--red-light);}
+.info-bar .stat.gold{color:var(--gold);}
+.info-bar .stat.floor{color:var(--blue-light);}
+.info-bar .right{margin-left:auto;text-align:right;font-size:13px;color:var(--text-gray);}
+.section{background:linear-gradient(135deg,rgba(42,32,24,.6),rgba(26,18,12,.6));border:1px solid #4a3a25;border-radius:8px;padding:18px;margin-bottom:18px;}
+.section-title{font-size:18px;color:var(--gold);margin-bottom:12px;font-family:'Cinzel',serif;}
+.section-title .count{color:var(--text-gray);font-size:14px;margin-left:8px;font-family:'Kreon',serif;}
+.relic-row{display:flex;flex-wrap:wrap;gap:8px;}
+.relic-icon{width:52px;height:52px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:26px;background:rgba(255,255,255,.03);border:2px solid #5a4a35;position:relative;cursor:pointer;transition:transform .15s;}
+.relic-icon:hover{transform:scale(1.1);border-color:var(--gold);}
+.relic-icon .tooltip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:#1a120c;border:1px solid var(--gold-dark);padding:8px 12px;border-radius:4px;font-size:12px;white-space:normal;width:200px;display:none;z-index:10;color:var(--text-cream);}
+.relic-icon:hover .tooltip{display:block;}
+.card-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+.card-entry{background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:6px;padding:10px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:all .15s;}
+.card-entry:hover{border-color:var(--gold);transform:translateY(-2px);}
+.card-entry .card-icon{width:32px;height:40px;background:rgba(255,255,255,.05);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.card-entry .card-info{flex:1;min-width:0;}
+.card-entry .card-name{font-size:13px;color:var(--text-cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-entry .card-count{font-size:11px;color:var(--text-gray);}
+.card-entry.rare{border-color:var(--gold-dark);}
+.card-entry.uncommon{border-color:var(--green);}
+.card-entry.curse{border-color:var(--purple);}
+.analysis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;}
+.analysis-item{background:rgba(201,162,39,.05);padding:14px;border-radius:6px;text-align:center;border:1px solid #4a3a25;}
+.analysis-item .val{font-size:26px;font-weight:700;color:var(--gold);font-family:'Cinzel',serif;}
+.analysis-item .lbl{font-size:12px;color:var(--text-gray);margin-top:4px;}
+.suggestion{background:rgba(201,162,39,.08);border-left:3px solid var(--gold);padding:10px 14px;margin-bottom:8px;border-radius:0 4px 4px 0;}
+.suggestion.warning{background:rgba(184,64,64,.08);border-left-color:var(--red);}
+.suggestion.info{background:rgba(74,122,184,.08);border-left-color:var(--blue);}
+.suggestion .title{font-weight:700;color:var(--gold);margin-bottom:4px;font-size:14px;}
+.suggestion.warning .title{color:var(--red-light);}
+.suggestion.info .title{color:var(--blue-light);}
+.suggestion .content{font-size:13px;color:var(--text-cream);line-height:1.5;}
+.loading{text-align:center;padding:60px;color:var(--text-dim);font-size:16px;}
 </style></head>
 <body>
-<div class="topbar"><a href="/history">← 返回历史列表</a> | 对局历史记录</div>
-<div class="container" id="content"><div class="loading">加载中...</div></div>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+  <a href="/live">当前对局</a><a href="/history" class="active">历史对局</a>
+  <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+</div></div>
+<div class="page-header"><h1>📜 对局复盘</h1><p>战略分析 · 卡组回顾 · 改进建议</p></div>
+<div class="replay-container" id="content"><div class="loading">加载中...</div></div>
 <script>
 const runId="{{ run_id }}";
 const relicEmoji={"风的女儿":"🌪️","水银沙漏":"⏳","投斧":"🪓","船夹板":"🛡️","金纸":"📜","永冻冰晶":"❄️","钨合金棍":"🔧","蛇之戒指":"💍","红面具":"🎭","节日拉炮":"🎉","巨大扭蛋":"🥚","空鸟笼":"🐦"};
@@ -1391,16 +1259,16 @@ fetch('/api/history/'+runId).then(r=>r.json()).then(run=>{
   const ascension=run.ascension||0,hp=run.current_hp||0,maxHp=run.max_hp||70,gold=run.gold||0,deck=run.deck||[],relics=run.relics||[],maxFloor=run.max_floor||0;
   let html='';
   html+='<div class="info-bar"><div class="char-icon">🐍</div><div class="stat hp"><span class="icon">❤️</span>'+hp+'/'+maxHp+'</div><div class="stat gold"><span class="icon">🪙</span>'+gold+'</div><div class="stat"><span class="icon">🃏</span>'+deck.length+'</div><div class="stat floor"><span class="icon">🏔️</span>'+maxFloor+'</div><div class="stat"><span class="icon">⭐</span>进阶'+ascension+'</div><div class="right"><div>'+(run.date||'')+'</div><div>静默猎手 · '+(run.result||'未知')+'</div></div></div>';
-  html+='<div class="relic-section"><div class="section-title">📦 遗物 <span class="count">('+relics.length+')</span></div><div class="relic-grid">';
-  for(const r of relics){html+='<div class="relic-item common"><span>'+getRelicEmoji(r)+'</span><div class="tooltip">'+r+'</div></div>';}
+  html+='<div class="section"><div class="section-title">📦 遗物 <span class="count">('+relics.length+')</span></div><div class="relic-row">';
+  for(const r of relics){html+='<div class="relic-icon"><span>'+getRelicEmoji(r)+'</span><div class="tooltip">'+r+'</div></div>';}
   html+='</div></div>';
   const cardCounts={};for(const c of deck){cardCounts[c]=(cardCounts[c]||0)+1;}
-  html+='<div class="card-section"><div class="section-title">🃏 卡牌 <span class="count">('+deck.length+')</span></div><div class="card-grid">';
+  html+='<div class="section"><div class="section-title">🃏 卡牌 <span class="count">('+deck.length+')</span></div><div class="card-row">';
   for(const [name,count] of Object.entries(cardCounts)){
-    html+='<div class="card-item '+getCardRarity(name)+'"><div class="card-icon">🃏</div><div class="card-info"><div class="card-name">'+name+'</div>'+(count>1?'<div class="card-count">×'+count+'</div>':'')+'</div></div>';
+    html+='<div class="card-entry '+getCardRarity(name)+'"><div class="card-icon">🃏</div><div class="card-info"><div class="card-name">'+name+'</div>'+(count>1?'<div class="card-count">×'+count+'</div>':'')+'</div></div>';
   }
   html+='</div></div>';
-  html+='<div class="analysis-section"><div class="section-title">📊 战略复盘分析</div><div id="analysisContent"><div class="loading">分析中...</div></div></div>';
+  html+='<div class="section"><div class="section-title">📊 战略复盘分析</div><div id="analysisContent"><div class="loading">分析中...</div></div></div>';
   document.getElementById('content').innerHTML=html;
   fetch('/api/analysis/'+runId).then(r=>r.json()).then(d=>{
     const a=d.analysis;let ah='<div class="analysis-grid">';
