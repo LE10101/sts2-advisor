@@ -16,8 +16,8 @@ MONSTER_DB = [
         "abilities": ["滑溜×1"],
         "moves": [
             {"name": "刺击!", "desc": "普通攻击", "damage": 0, "hits": 1, "intent": "attack"},
-            {"name": "旋风", "desc": "AOE攻击", "damage": 0, "hits": 0, "intent": "attack"},
-            {"name": "锐利凝视", "desc": "施加debuff", "damage": 0, "hits": 0, "intent": "debuff"},
+            {"name": "旋风", "desc": "AOE攻击", "damage": 2, "hits": 0, "intent": "attack"},
+            {"name": "锐利凝视", "desc": "施加debuff", "damage": 10, "hits": 0, "intent": "debuff"},
         ],
         "tip": "低血量小怪，滑溜使攻击有几率未命中，优先快速清理"
     },
@@ -60,7 +60,7 @@ MONSTER_DB = [
         "moves": [
             {"name": "狂乱撕扯!", "desc": "多段攻击", "damage": 0, "hits": 0, "intent": "attack"},
             {"name": "怒吼", "desc": "自身增益", "damage": 0, "hits": 0, "intent": "buff"},
-            {"name": "爪击", "desc": "普通攻击", "damage": 0, "hits": 1, "intent": "attack"},
+            {"name": "爪击", "desc": "普通攻击", "damage": 4, "hits": 1, "intent": "attack"},
         ],
         "tip": "怒吼后伤害提升，注意在怒吼后回合保持高格挡"
     },
@@ -147,7 +147,7 @@ MONSTER_DB = [
         "abilities": ["领地意识×1"],
         "moves": [
             {"name": "啄击!", "desc": "多段攻击", "damage": 0, "hits": 0, "intent": "attack"},
-            {"name": "飞扑", "desc": "高伤害攻击", "damage": 0, "hits": 1, "intent": "attack"},
+            {"name": "飞扑", "desc": "高伤害攻击", "damage": 17, "hits": 1, "intent": "attack"},
         ],
         "tip": "领地意识会在你使用特定牌时反击，注意出牌选择"
     },
@@ -192,8 +192,8 @@ MONSTER_DB = [
         "abilities": ["滑溜×8"],
         "moves": [
             {"name": "墨迹!", "desc": "攻击+施加滑溜", "damage": 0, "hits": 1, "intent": "attack"},
-            {"name": "墨水长枪", "desc": "高伤害攻击", "damage": 0, "hits": 1, "intent": "attack"},
-            {"name": "肢解", "desc": "多段攻击", "damage": 0, "hits": 0, "intent": "attack"},
+            {"name": "墨水长枪", "desc": "高伤害攻击", "damage": 6, "hits": 1, "intent": "attack"},
+            {"name": "肢解", "desc": "多段攻击", "damage": 26, "hits": 0, "intent": "attack"},
             {"name": "准备", "desc": "充能下回合大招", "damage": 0, "hits": 0, "intent": "buff"},
         ],
         "tip": "滑溜层数高，攻击容易未命中，准备回合后是大招，注意格挡"
@@ -241,8 +241,8 @@ MONSTER_DB = [
         "abilities": [],
         "moves": [
             {"name": "浓毒!", "desc": "施加大量毒", "damage": 0, "hits": 0, "intent": "debuff"},
-            {"name": "啃咬", "desc": "普通攻击", "damage": 0, "hits": 1, "intent": "attack"},
-            {"name": "吸吮", "desc": "吸血攻击", "damage": 0, "hits": 1, "intent": "attack"},
+            {"name": "啃咬", "desc": "普通攻击", "damage": 13, "hits": 1, "intent": "attack"},
+            {"name": "吸吮", "desc": "吸血攻击", "damage": 4, "hits": 1, "intent": "attack"},
         ],
         "tip": "会施毒，毒流派可以反制，但注意自身毒层数"
     },
@@ -285,8 +285,8 @@ MONSTER_DB = [
         "abilities": [],
         "moves": [
             {"name": "产卵!", "desc": "召唤虫卵", "damage": 0, "hits": 0, "intent": "buff"},
-            {"name": "猛砸", "desc": "高伤害攻击", "damage": 0, "hits": 1, "intent": "attack"},
-            {"name": "嫩化", "desc": "施加易伤", "damage": 0, "hits": 0, "intent": "debuff"},
+            {"name": "猛砸", "desc": "高伤害攻击", "damage": 16, "hits": 1, "intent": "attack"},
+            {"name": "嫩化", "desc": "施加易伤", "damage": 7, "hits": 0, "intent": "debuff"},
             {"name": "高营养糊糊", "desc": "治疗/增益", "damage": 0, "hits": 0, "intent": "buff"},
         ],
         "tip": "会产卵召唤小怪，优先击杀虫卵或快速击杀本体"
@@ -316,8 +316,8 @@ MONSTER_DB = [
         "abilities": ["人体蜂房×2"],
         "moves": [
             {"name": "喷射信息素!", "desc": "施加debuff", "damage": 0, "hits": 0, "intent": "debuff"},
-            {"name": "蜜——蜂——！", "desc": "召唤蜂群", "damage": 0, "hits": 0, "intent": "buff"},
-            {"name": "矛击！", "desc": "普通攻击", "damage": 0, "hits": 1, "intent": "attack"},
+            {"name": "蜜——蜂——！", "desc": "召唤蜂群", "damage": 3, "hits": 0, "intent": "buff"},
+            {"name": "矛击！", "desc": "普通攻击", "damage": 18, "hits": 1, "intent": "attack"},
         ],
         "tip": "会召唤蜂群小怪，注意清理，人体蜂房会持续生成小怪"
     },
@@ -347,10 +347,10 @@ MONSTER_DB = [
         "abilities": ["后方攻击×1", "蟹之怒×1"],
         "moves": [
             {"name": "撕扯!", "desc": "多段攻击", "damage": 0, "hits": 0, "intent": "attack"},
-            {"name": "巨化打击", "desc": "高伤害攻击", "damage": 0, "hits": 1, "intent": "attack"},
-            {"name": "虫蛰", "desc": "攻击+施毒", "damage": 0, "hits": 1, "intent": "attack"},
+            {"name": "巨化打击", "desc": "高伤害攻击", "damage": 4, "hits": 1, "intent": "attack"},
+            {"name": "虫蛰", "desc": "攻击+施毒", "damage": 6, "hits": 1, "intent": "attack"},
             {"name": "适应", "desc": "获得格挡/增益", "damage": 0, "hits": 0, "intent": "defend"},
-            {"name": "戒备打击", "desc": "攻击+格挡", "damage": 0, "hits": 1, "intent": "attack"},
+            {"name": "戒备打击", "desc": "攻击+格挡", "damage": 12, "hits": 1, "intent": "attack"},
         ],
         "tip": "蟹之怒会在低血量时增加伤害，后期注意保持高格挡"
     },
@@ -364,9 +364,9 @@ MONSTER_DB = [
         "abilities": ["后方攻击×1", "蟹之怒×1", "遭到包围×1"],
         "moves": [
             {"name": "瞄准十字!", "desc": "标记目标", "damage": 0, "hits": 0, "intent": "debuff"},
-            {"name": "精准光束", "desc": "高伤害攻击", "damage": 0, "hits": 1, "intent": "attack"},
+            {"name": "精准光束", "desc": "高伤害攻击", "damage": 18, "hits": 1, "intent": "attack"},
             {"name": "蓄能", "desc": "充能", "damage": 0, "hits": 0, "intent": "buff"},
-            {"name": "激光", "desc": "AOE攻击", "damage": 0, "hits": 0, "intent": "attack"},
+            {"name": "激光", "desc": "AOE攻击", "damage": 31, "hits": 0, "intent": "attack"},
             {"name": "重新充能", "desc": "恢复能量", "damage": 0, "hits": 0, "intent": "buff"},
         ],
         "tip": "蓄能后激光伤害很高，蓄能回合多叠格挡"
@@ -398,8 +398,8 @@ MONSTER_DB = [
         "abilities": [],
         "moves": [
             {"name": "组装!", "desc": "召唤构造体", "damage": 0, "hits": 0, "intent": "buff"},
-            {"name": "组装打击", "desc": "攻击", "damage": 0, "hits": 1, "intent": "attack"},
-            {"name": "瓦解", "desc": "施加debuff", "damage": 0, "hits": 0, "intent": "debuff"},
+            {"name": "组装打击", "desc": "攻击", "damage": 18, "hits": 1, "intent": "attack"},
+            {"name": "瓦解", "desc": "施加debuff", "damage": 11, "hits": 0, "intent": "debuff"},
         ],
         "tip": "会召唤小怪，优先清理或快速击杀本体"
     },
@@ -476,8 +476,8 @@ MONSTER_DB = [
             {"name": "屏障!", "desc": "获得格挡", "damage": 0, "hits": 0, "intent": "defend"},
             {"name": "你是我的了", "desc": "控制效果", "damage": 0, "hits": 0, "intent": "debuff"},
             {"name": "为我尽力燃烧吧", "desc": "施加燃烧", "damage": 0, "hits": 0, "intent": "debuff"},
-            {"name": "将头砍下", "desc": "高伤害攻击", "damage": 0, "hits": 1, "intent": "attack"},
-            {"name": "处决", "desc": "斩杀攻击", "damage": 0, "hits": 1, "intent": "attack"},
+            {"name": "将头砍下", "desc": "高伤害攻击", "damage": 3, "hits": 1, "intent": "attack"},
+            {"name": "处决", "desc": "斩杀攻击", "damage": 15, "hits": 1, "intent": "attack"},
         ],
         "tip": "高血量Boss，会控制和燃烧，注意清理debuff，处决对低血量威胁大"
     },
