@@ -1,253 +1,341 @@
-"""战斗状态与动作的数据结构。
+"""战斗状态数据模型：从 STS2 AI Agent 快照容错解析成内部结构。
 
-autoSpire 返回的 JSON 字段名在不同版本可能有出入，因此这里统一提供
-``from_snapshot`` 做"容错解析"：对每个字段尝试多个候选键名，缺省给合理默认值，
-保证离线 demo 与真实对接都能工作。
+适配 CharTyr/STS2-Agent mod v0.16.2+ 的 state 结构：
+- combat.player: {current_hp, max_hp, block, energy, powers:[...]}
+- combat.hand: [{index, card_id, name, energy_cost, resolved_rules_text, dynamic_values, playable}]
+- combat.enemies: [{index, enemy_id, name, current_hp, max_hp, block, powers, intents}]
 """
-
 from __future__ import annotations
+import copy
+from typing import Any, Optional
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
 
-
-# ---------------------------------------------------------------------------
-# 小工具：宽松取键
-# ---------------------------------------------------------------------------
-def _pick(d: Optional[Dict[str, Any]], *keys, default=None):
-    """按顺序尝试多个键名，返回第一个命中；都没有则返回 default。"""
-    if not d:
-        return default
+def _pick(d: dict, *keys, default=None):
+    """按优先级从嵌套 dict 里取值，容错字段名差异。"""
     for k in keys:
-        if k in d and d[k] is not None:
+        if isinstance(k, str) and "." in k:
+            cur = d
+            ok = True
+            for part in k.split("."):
+                if isinstance(cur, dict) and part in cur:
+                    cur = cur[part]
+                else:
+                    ok = False
+                    break
+            if ok:
+                return cur
+        elif isinstance(d, dict) and k in d:
             return d[k]
     return default
 
 
-# ---------------------------------------------------------------------------
-# 卡牌
-# ---------------------------------------------------------------------------
-@dataclass
+def _power_amount(powers: list, *power_ids: str) -> int:
+    """从 powers 数组里提取指定 power_id 的 amount，容错大小写和后缀。"""
+    if not isinstance(powers, list):
+        return 0
+    target_ids = {pid.upper().replace("_POWER", "") for pid in power_ids}
+    for p in powers:
+        if not isinstance(p, dict):
+            continue
+        pid = str(p.get("power_id", p.get("id", ""))).upper().replace("_POWER", "")
+        if pid in target_ids:
+            try:
+                return int(p.get("amount", 0))
+            except (ValueError, TypeError):
+                return 0
+    return 0
+
+
+def _intent_info(intents: list) -> dict:
+    """从 intents 数组提取完整意图信息。"""
+    info = {"type": "?", "damage": 0, "hits": 1, "total_damage": 0,
+            "is_aoe": False, "status_card_count": 0}
+    if not isinstance(intents, list) or not intents:
+        return info
+    total = 0
+    for it in intents:
+        if not isinstance(it, dict):
+            continue
+        itype = str(it.get("intent_type", "")).lower()
+        if itype and info["type"] == "?":
+            info["type"] = it.get("intent_type", "?")
+        dmg = it.get("damage", 0)
+        hits = it.get("hits", 1) or 1
+        try:
+            dmg = int(dmg) if dmg is not None else 0
+            hits = int(hits) if hits is not None else 1
+        except (ValueError, TypeError):
+            dmg, hits = 0, 1
+        total += dmg * hits
+        if "attack" in itype and info["damage"] == 0:
+            info["damage"] = dmg
+            info["hits"] = hits
+        if it.get("status_card_count"):
+            try:
+                info["status_card_count"] = int(it.get("status_card_count"))
+            except (ValueError, TypeError):
+                pass
+    info["total_damage"] = total
+    # AOE 判断：intent_type 包含 attack 且没有明确目标，或标签包含 all/aoe
+    first = intents[0] if intents else {}
+    label = str(first.get("label", "")).lower()
+    if "all" in label or "aoe" in label or "全体" in label:
+        info["is_aoe"] = True
+    return info
+
+
 class Card:
-    """手牌中的一张卡。hand_index 是 autoSpire 动作所需的索引。"""
+    def __init__(self, name: str, cost: int = -1, card_type: str = "attack",
+                 upgraded: bool = False, hand_index: int = -1, exhaust: bool = False,
+                 card_id: str = "", requires_target: bool = False,
+                 target_type: str = "", playable: bool = True,
+                 resolved_text: str = "", dynamic_values: Optional[list] = None):
+        self.name = name
+        self.cost = cost
+        self.type = card_type
+        self.upgraded = upgraded
+        self.hand_index = hand_index
+        self.exhaust = exhaust
+        self.card_id = card_id
+        self.requires_target = requires_target
+        self.target_type = target_type
+        self.playable = playable
+        self.resolved_text = resolved_text
+        self.dynamic_values = dynamic_values or []
 
-    name: str
-    hand_index: int
-    cost: int = 1
-    damage: int = 0
-    block: int = 0
-    description: str = ""
-    card_type: str = "attack"  # attack / skill / power
-    shiv: bool = False   # 小刀：0费攻击，打出自消耗
-    sly: bool = False    # Sly：被弃时按原费用自动打出
-    exhaust: bool = False  # 打出后消耗
+    def dynamic_value(self, name: str) -> Optional[int]:
+        """从 dynamic_values 里取指定名称的 current_value。"""
+        for dv in self.dynamic_values:
+            if isinstance(dv, dict) and dv.get("name", "").lower() == name.lower():
+                try:
+                    return int(dv.get("current_value", dv.get("base_value")))
+                except (ValueError, TypeError):
+                    return None
+        return None
 
-    @classmethod
-    def from_dict(cls, d: Dict[str, Any], fallback_index: int) -> "Card":
-        name = _pick(d, "name", "card_name", "title", default="?")
-        desc = _pick(d, "description", "desc", default="")
-        # 卡牌类型推断：仅根据名字/描述启发式，真实场景可从 autoSpire 字段读取
-        ctype = _pick(d, "type", "card_type", "rarity", default="")
-        if ctype not in ("attack", "skill", "power"):
-            name_l = name.lower() + " " + desc
-            if "power" in name_l or "能力" in name:
+    def fingerprint(self) -> str:
+        return f"{self.card_id or self.name}|{self.cost}|{self.type}|{1 if self.upgraded else 0}"
+
+    def __repr__(self):
+        return f"Card({self.name},cost={self.cost},id={self.card_id})"
+
+    @staticmethod
+    def from_dict(d: dict, hand_index: int = -1) -> "Card":
+        ctype = str(_pick(d, "card_type", "type", default="")).lower()
+        # mod 可能不提供 card_type，从 card_id / resolved_text 推断
+        if not ctype or ctype == "none":
+            cid = str(d.get("card_id", "")).upper()
+            rtext = str(d.get("resolved_rules_text", ""))
+            if "POWER" in cid:
                 ctype = "power"
-            elif "skill" in name_l or "技能" in name:
-                ctype = "skill"
-            else:
+            elif "ATTACK" in cid or cid in ("STRIKE", "BASH", "NEUTRALIZE", "SNAKEBITE",
+                                              "POISONED_STAB", "DAGGER_THROW", "FINISHER"):
                 ctype = "attack"
-        return cls(
-            name=name,
-            hand_index=_pick(d, "hand_index", "index", "idx", default=fallback_index),
-            cost=_pick(d, "cost", "energy_cost", "energy", default=1),
-            damage=_pick(d, "damage", default=0) or 0,
-            block=_pick(d, "block", "block_value", default=0) or 0,
-            description=desc,
-            card_type=ctype,
-        )
-
-    def fingerprint(self) -> tuple:
-        """卡牌身份指纹：用于 SL 牌序去重与手牌差异识别。"""
-        return (self.name, self.damage, self.block, self.cost, self.card_type)
-
-    def __repr__(self) -> str:  # 便于打印
-        extra = f"{self.damage}伤害" if self.damage else ""
-        if self.block:
-            extra += f"{self.block}格挡"
-        tag = "小刀" if self.shiv else ("Sly" if self.sly else "")
-        if tag:
-            extra += f"[{tag}]"
-        return f"[{self.hand_index}]{self.name}({self.cost}费{extra})"
-
-
-# ---------------------------------------------------------------------------
-# 敌人
-# ---------------------------------------------------------------------------
-@dataclass
-class Enemy:
-    id: int
-    name: str
-    hp: int
-    max_hp: int = 0
-    block: int = 0
-    intent: str = "unknown"  # attack / defend / buff / unknown ...
-    intent_value: int = 0  # 意图数值（攻击伤害 / 格挡量）
-    buffs: Dict[str, int] = field(default_factory=dict)
-
-    @classmethod
-    def from_dict(cls, d: Dict[str, Any]) -> "Enemy":
-        hp = _pick(d, "hp", "current_hp", "health", default=0) or 0
-        return cls(
-            id=_pick(d, "id", "entity_id", "combat_id", default=0) or 0,
-            name=_pick(d, "name", "enemy_name", "title", default="敌人"),
-            hp=hp,
-            max_hp=_pick(d, "max_hp", "maxHealth", default=hp) or hp,
-            block=_pick(d, "block", default=0) or 0,
-            intent=_pick(d, "intent", "intent_name", "move", default="unknown"),
-            intent_value=_pick(d, "intent_value", "intent_damage", "move_value", default=0) or 0,
-            buffs=_pick(d, "buffs", "statuses", default={}) or {},
-        )
-
-    @property
-    def alive(self) -> bool:
-        return self.hp > 0
-
-    def __repr__(self) -> str:
-        return f"[{self.id}]{self.name}(HP {self.hp})意图:{self.intent}{self.intent_value}"
-
-
-# ---------------------------------------------------------------------------
-# 战斗状态（模拟器与 MCTS 共同使用的核心状态）
-# ---------------------------------------------------------------------------
-@dataclass
-class CombatState:
-    player_hp: int
-    max_hp: int
-    energy: int
-    hand: List[Card]
-    enemies: List[Enemy]
-    player_block: int = 0
-    player_buffs: Dict[str, int] = field(default_factory=dict)
-    potions: List[Dict[str, Any]] = field(default_factory=list)
-    draw_pile: int = 0
-    discard_pile: int = 0
-    turn: int = 1
-    seed: int = 0  # 供模拟器做确定性伪随机
-    deck: List[str] = field(default_factory=list)  # 当前卡组牌名列表（用于价值评估）
-    draw_pos: int = 0  # 本战斗累计抽牌数（配合 SL 牌序记忆，沿搜索路径各自累计）
-
-    @classmethod
-    def from_snapshot(cls, snap: Dict[str, Any]) -> "CombatState":
-        """从 autoSpire 的 combat 子快照解析战斗状态。"""
-        combat = snap.get("combat", snap)  # 兼容直接传子快照
-        player = _pick(combat, "player", "self", default={}) or {}
-        player_stats = _pick(player, "stats", "character", default=player)
-        hp = _pick(player_stats, "hp", "current_hp", "health", default=0) or 0
-        max_hp = _pick(player_stats, "max_hp", "maxHealth", default=hp) or hp
-
-        hand_raw = _pick(combat, "hand", "hand_cards", "cards", default=[]) or []
-        hand = [
-            Card.from_dict(c, i)
-            for i, c in enumerate(hand_raw)
-        ]
-
-        enemies_raw = _pick(combat, "enemies", "monsters", default=[]) or []
-        enemies = [Enemy.from_dict(e) for e in enemies_raw]
-
-        # 卡组：从 run.deck 提取牌名（合并计数）
-        run = snap.get("run", {}) or {}
-        deck_raw = _pick(run, "deck", "cards", "deck_cards", default=[]) or []
-        deck = []
-        for d in deck_raw:
-            if isinstance(d, dict):
-                nm = _pick(d, "name", "card_name", default="")
-                cnt = _pick(d, "count", "copies", default=1) or 1
-                deck += [nm] * max(0, int(cnt))
+            elif "DEFEND" in cid or "SKILL" in cid:
+                ctype = "skill"
+            elif "伤害" in rtext and "格挡" not in rtext:
+                ctype = "attack"
+            elif "获得" in rtext and ("力量" in rtext or "敏捷" in rtext or "能力" in rtext):
+                ctype = "power"
             else:
-                deck.append(str(d))
-
-        return cls(
-            player_hp=hp,
-            max_hp=max_hp or 80,
-            energy=_pick(player_stats, "energy", "energy_now", "current_energy", default=3) or 0,
-            hand=hand,
-            enemies=enemies,
-            player_block=_pick(player, "block", default=0) or 0,
-            player_buffs=_pick(player, "buffs", "statuses", default={}) or {},
-            potions=_pick(combat, "potions", default=[]) or [],
-            draw_pile=_pick(combat, "draw_pile", "drawPileCount", "draw_count", default=0) or 0,
-            discard_pile=_pick(combat, "discard_pile", "discardPileCount", default=0) or 0,
-            turn=_pick(combat, "turn", "turn_number", default=1) or 1,
-            seed=_pick(combat, "seed", default=0) or 0,
-            deck=deck,
+                ctype = "skill"
+        return Card(
+            name=str(_pick(d, "name", "card_name", default="?")),
+            cost=int(_pick(d, "energy_cost", "cost", default=-1)),
+            card_type=ctype,
+            upgraded=bool(_pick(d, "upgraded", default=False)),
+            hand_index=hand_index if hand_index >= 0 else int(_pick(d, "index", default=hand_index)),
+            exhaust=bool(_pick(d, "exhaust", default=False)),
+            card_id=str(_pick(d, "card_id", "id", default="")),
+            requires_target=bool(_pick(d, "requires_target", default=False)),
+            target_type=str(_pick(d, "target_type", default="")),
+            playable=bool(_pick(d, "playable", "can_play_result", default=True)),
+            resolved_text=str(_pick(d, "resolved_rules_text", default="")),
+            dynamic_values=_pick(d, "dynamic_values", default=[]),
         )
 
-    def copy(self) -> "CombatState":
-        """深拷贝：手牌、敌人、buff 均复制为新对象，避免状态转换污染共享引用。"""
-        return CombatState(
-            player_hp=self.player_hp,
-            max_hp=self.max_hp,
-            energy=self.energy,
-            hand=[Card(c.name, c.hand_index, c.cost, c.damage, c.block, c.description, c.card_type)
-                  for c in self.hand],
-            enemies=[Enemy(e.id, e.name, e.hp, e.max_hp, e.block, e.intent, e.intent_value,
-                           dict(e.buffs)) for e in self.enemies],
-            player_block=self.player_block,
-            player_buffs=dict(self.player_buffs),
-            potions=[dict(p) for p in self.potions],
-            draw_pile=self.draw_pile,
-            discard_pile=self.discard_pile,
-            turn=self.turn,
-            seed=self.seed,
-            deck=list(self.deck),
-            draw_pos=self.draw_pos,
+
+class Enemy:
+    def __init__(self, name: str, hp: int, max_hp: int, block: int = 0,
+                 intent: str = "?", intent_damage: int = 0, poison: int = 0,
+                 weak: int = 0, vulnerable: int = 0, strength: int = 0,
+                 index: int = 0, enemy_id: str = "", is_alive: bool = True,
+                 intent_hits: int = 1, intent_total_damage: int = 0,
+                 is_aoe: bool = False, intent_type: str = "?"):
+        self.name = name
+        self.hp = hp
+        self.max_hp = max_hp
+        self.block = block
+        self.intent = intent
+        self.intent_damage = intent_damage
+        self.intent_hits = intent_hits
+        self.intent_total_damage = intent_total_damage
+        self.is_aoe = is_aoe
+        self.intent_type = intent_type
+        self.poison = poison
+        self.weak = weak
+        self.vulnerable = vulnerable
+        self.strength = strength
+        self.index = index
+        self.enemy_id = enemy_id
+        self.is_alive = is_alive
+
+    def alive(self) -> bool:
+        return self.hp > 0 and self.is_alive
+
+    def __repr__(self):
+        return f"Enemy({self.name},{self.hp}/{self.max_hp})"
+
+    @staticmethod
+    def from_dict(d: dict, index: int = 0) -> "Enemy":
+        powers = _pick(d, "powers", default=[]) or []
+        intent_info = _intent_info(_pick(d, "intents", default=[]))
+        return Enemy(
+            name=str(_pick(d, "name", default="enemy")),
+            hp=int(_pick(d, "current_hp", "hp", default=1)),
+            max_hp=int(_pick(d, "max_hp", "hp_max", default=1)),
+            block=int(_pick(d, "block", default=0)),
+            intent=str(_pick(d, "intent", "move_id", default=intent_info["type"])),
+            intent_damage=intent_info["damage"],
+            intent_hits=intent_info["hits"],
+            intent_total_damage=intent_info["total_damage"],
+            is_aoe=intent_info["is_aoe"],
+            intent_type=intent_info["type"],
+            poison=_power_amount(powers, "POISON"),
+            weak=_power_amount(powers, "WEAK"),
+            vulnerable=_power_amount(powers, "VULNERABLE"),
+            strength=_power_amount(powers, "STRENGTH"),
+            index=index if index >= 0 else int(_pick(d, "index", default=index)),
+            enemy_id=str(_pick(d, "enemy_id", "id", default="")),
+            is_alive=bool(_pick(d, "is_alive", default=True)),
         )
 
-    def alive_enemies(self) -> List[Enemy]:
-        return [e for e in self.enemies if e.alive]
 
-    def any_enemy_alive(self) -> bool:
-        return any(e.alive for e in self.enemies)
-
-    def __repr__(self) -> str:
-        return (f"Combat[turn{self.turn} 玩家HP{self.player_hp}/{self.max_hp} "
-                f"能量{self.energy} 手牌{len(self.hand)}] "
-                f"敌人:{self.alive_enemies()}")
-
-
-# ---------------------------------------------------------------------------
-# 动作
-# ---------------------------------------------------------------------------
-@dataclass(frozen=True)
 class Action:
-    kind: str  # "play_card" / "end_turn" / "use_potion"
-    hand_index: Optional[int] = None
-    target_id: Optional[int] = None
-    potion_slot: Optional[int] = None
+    """玩家动作：出牌(带目标) 或 结束回合。"""
+    def __init__(self, kind: str, card: Optional[Card] = None, target_index: int = -1):
+        self.kind = kind  # "play_card" / "end_turn"
+        self.card = card
+        self.target_index = target_index
 
-    @classmethod
-    def play(cls, hand_index: int, target_id: Optional[int] = None) -> "Action":
-        return cls(kind="play_card", hand_index=hand_index, target_id=target_id)
-
-    @classmethod
-    def end_turn(cls) -> "Action":
-        return cls(kind="end_turn")
-
-    @classmethod
-    def potion(cls, slot: int, target_id: Optional[int] = None) -> "Action":
-        return cls(kind="use_potion", potion_slot=slot, target_id=target_id)
-
-    def describe(self, state: CombatState) -> str:
+    def describe(self, state: "CombatState") -> str:
         if self.kind == "end_turn":
             return "结束回合"
-        if self.kind == "play_card":
-            card = next((c for c in state.hand if c.hand_index == self.hand_index), None)
-            name = card.name if card else f"卡{self.hand_index}"
-            if self.target_id is not None:
-                en = next((e for e in state.enemies if e.id == self.target_id), None)
-                tgt = en.name if en else str(self.target_id)
-                return f"打出[{name}] → {tgt}"
-            return f"打出[{name}]"
-        if self.kind == "use_potion":
-            return f"使用药水槽{self.potion_slot}"
-        return str(self)
+        tgt = ""
+        if self.target_index >= 0 and self.target_index < len(state.enemies):
+            tgt = f" → {state.enemies[self.target_index].name}"
+        return f"打出[{self.card.name}]{tgt}"
+
+    def to_dict(self) -> dict:
+        if self.kind == "end_turn":
+            return {"action": "end_turn"}
+        return {"action": "play_card", "card_index": self.card.hand_index,
+                "target_index": self.target_index if self.target_index >= 0 else None}
+
+
+class CombatState:
+    def __init__(self):
+        self.player_hp = 70
+        self.player_max_hp = 70
+        self.player_block = 0
+        self.energy = 3
+        self.max_energy = 3
+        self.hand: list[Card] = []
+        self.draw_pile: list[Card] = []
+        self.discard_pile: list[Card] = []
+        self.exhaust_pile: list[Card] = []
+        self.enemies: list[Enemy] = []
+        self.turn = 1
+        self.poison = 0
+        self.weak = 0
+        self.vulnerable = 0
+        self.frail = 0
+        self.strength = 0
+        self.dexterity = 0
+        self.draw_pos = 0
+        self.phase = "combat"
+        self.cards_played_this_turn = 0
+        self.attacks_played_this_turn = 0
+        self.skills_played_this_turn = 0
+        self.relics: list[str] = []  # 遗物ID列表
+        self.first_card_played = False  # 投斧：本回合第一张牌是否已打出
+        self.exhausted_count = 0  # 金纸：本回合已消耗牌数
+        self.power_card_played = False  # 永冻冰晶：是否已打过能力牌
+
+    def copy(self) -> "CombatState":
+        c = CombatState()
+        c.player_hp = self.player_hp
+        c.player_max_hp = self.player_max_hp
+        c.player_block = self.player_block
+        c.energy = self.energy
+        c.max_energy = self.max_energy
+        c.hand = [copy.copy(x) for x in self.hand]
+        c.draw_pile = [copy.copy(x) for x in self.draw_pile]
+        c.discard_pile = [copy.copy(x) for x in self.discard_pile]
+        c.exhaust_pile = [copy.copy(x) for x in self.exhaust_pile]
+        c.enemies = [copy.copy(x) for x in self.enemies]
+        c.turn = self.turn
+        c.poison = self.poison
+        c.weak = self.weak
+        c.vulnerable = self.vulnerable
+        c.frail = self.frail
+        c.strength = self.strength
+        c.dexterity = self.dexterity
+        c.draw_pos = self.draw_pos
+        c.phase = self.phase
+        c.cards_played_this_turn = self.cards_played_this_turn
+        c.attacks_played_this_turn = self.attacks_played_this_turn
+        c.skills_played_this_turn = self.skills_played_this_turn
+        c.relics = list(self.relics)
+        c.first_card_played = self.first_card_played
+        c.exhausted_count = self.exhausted_count
+        c.power_card_played = self.power_card_played
+        return c
+
+    @staticmethod
+    def from_snapshot(snap: dict) -> "CombatState":
+        """从 STS2 AI Agent 的 combat 快照解析。snap 应为 state.data.combat。"""
+        s = CombatState()
+        s.phase = str(_pick(snap, "phase", "game_phase", default="combat"))
+
+        # 玩家状态
+        player = _pick(snap, "player", "player_state", default={}) or {}
+        s.player_hp = int(_pick(player, "current_hp", "hp", default=70))
+        s.player_max_hp = int(_pick(player, "max_hp", "hp_max", default=70))
+        s.player_block = int(_pick(player, "block", default=0))
+        s.energy = int(_pick(player, "energy", "current_energy", default=3))
+        s.max_energy = int(_pick(player, "max_energy", default=3))
+        s.cards_played_this_turn = int(_pick(player, "cards_played_this_turn", default=0))
+        s.attacks_played_this_turn = int(_pick(player, "attacks_played_this_turn", default=0))
+        s.skills_played_this_turn = int(_pick(player, "skills_played_this_turn", default=0))
+
+        powers = _pick(player, "powers", default=[]) or []
+        s.weak = _power_amount(powers, "WEAK")
+        s.vulnerable = _power_amount(powers, "VULNERABLE")
+        s.frail = _power_amount(powers, "FRAIL")
+        s.strength = _power_amount(powers, "STRENGTH")
+        s.dexterity = _power_amount(powers, "DEXTERITY")
+        s.poison = _power_amount(powers, "POISON", "NOXIOUS_FUMES")
+
+        # 手牌
+        hand = _pick(snap, "hand", default=[]) or []
+        s.hand = [Card.from_dict(c, i) for i, c in enumerate(hand)]
+
+        # 抽牌堆/弃牌堆（mod 可能不直接提供，留空由 SL 记忆系统补充）
+        draw = _pick(snap, "draw_pile", "draw", default=[]) or []
+        s.draw_pile = [Card.from_dict(c) for c in draw]
+        disc = _pick(snap, "discard_pile", "discard", default=[]) or []
+        s.discard_pile = [Card.from_dict(c) for c in disc]
+        exh = _pick(snap, "exhaust_pile", "exhaust", default=[]) or []
+        s.exhaust_pile = [Card.from_dict(c) for c in exh]
+
+        # 敌人
+        enemies = _pick(snap, "enemies", "monsters", default=[]) or []
+        s.enemies = [Enemy.from_dict(e, i) for i, e in enumerate(enemies)]
+
+        # 回合数
+        s.turn = int(_pick(snap, "turn", "round", default=1) or 1)
+        return s
+
+    def alive_enemies(self) -> list[Enemy]:
+        return [e for e in self.enemies if e.alive()]
