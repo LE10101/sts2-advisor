@@ -315,6 +315,228 @@ def api_relic_detail(relic_name):
     return jsonify({"error": "遗物未找到"}), 404
 
 
+# ============ 使用指南页面 ============
+@app.route("/guide")
+def guide():
+    return render_template_string(GUIDE_HTML)
+
+GUIDE_HTML = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>使用指南 - STS2决策器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0f1923;color:#e0e6ed;min-height:100vh;}
+.nav-bar{background:#1a2a3a;border-bottom:1px solid #2d4a6a;padding:0;position:sticky;top:0;z-index:100;}
+.nav-bar .container{display:flex;align-items:center;gap:8px;max-width:900px;margin:0 auto;padding:8px 20px;overflow-x:auto;}
+.nav-bar a{color:#8899aa;text-decoration:none;font-size:13px;padding:8px 12px;border-radius:6px;white-space:nowrap;}
+.nav-bar a:hover{color:#4fc3f7;background:#0f1923;}
+.nav-bar a.active{color:#4fc3f7;background:#0f1923;}
+.nav-bar .nav-brand{color:#4fc3f7;font-weight:bold;font-size:15px;margin-right:8px;}
+.container{max-width:800px;margin:0 auto;padding:30px 20px;}
+h1{color:#4fc3f7;font-size:28px;margin-bottom:8px;}
+.subtitle{color:#8899aa;font-size:14px;margin-bottom:30px;}
+.step-card{background:#1a2a3a;border-radius:12px;padding:24px;margin-bottom:20px;border-left:4px solid #4fc3f7;}
+.step-card h2{color:#4fc3f7;font-size:20px;margin-bottom:12px;}
+.step-card p{color:#c0c8d0;font-size:15px;line-height:1.8;margin-bottom:10px;}
+.step-card code{background:#0f1923;padding:2px 8px;border-radius:4px;color:#66bb6a;font-size:13px;}
+.step-card ul{margin-left:20px;color:#c0c8d0;font-size:14px;line-height:2;}
+.step-card .tip{background:#1b5e20;padding:12px 16px;border-radius:8px;color:#66bb6a;font-size:13px;margin-top:12px;}
+.step-card .warn{background:#b71c1c;padding:12px 16px;border-radius:8px;color:#ef5350;font-size:13px;margin-top:12px;}
+.download-btn{display:inline-block;padding:12px 24px;background:#4fc3f7;color:#0f1923;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;margin-top:10px;}
+.download-btn:hover{background:#81d4fa;}
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:16px;}
+.feature-item{background:#0f1923;padding:12px;border-radius:8px;font-size:13px;color:#8899aa;}
+.feature-item strong{color:#4fc3f7;display:block;margin-bottom:4px;}
+</style></head>
+<body>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">STS2决策器</a>
+  <a href="/live">当前对局</a>
+  <a href="/history">历史对局</a>
+  <a href="/monsters">怪物图鉴</a>
+  <a href="/cards">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a>
+  <a href="/guide" class="active">使用指南</a>
+  <a href="/download">下载</a>
+</div></div>
+<div class="container">
+  <h1>📖 使用指南</h1>
+  <p class="subtitle">三步上手，用AI辅助你打好每一局静默猎手</p>
+
+  <div class="step-card">
+    <h2>第一步：安装游戏mod</h2>
+    <p>决策器需要通过 <strong>STS2 AI Agent mod</strong> 读取游戏状态。</p>
+    <ul>
+      <li>下载 STS2 AI Agent mod（GitHub: CharTyr/STS2-Agent）</li>
+      <li>将 <code>STS2AIAgent.dll</code> 放入游戏目录的 <code>mods</code> 文件夹</li>
+      <li>游戏路径：<code>Steam\\steamapps\\common\\Slay the Spire 2\\mods\\</code></li>
+      <li>启动游戏，在mod列表中启用 STS2 AI Agent</li>
+    </ul>
+    <div class="tip">💡 mod会在后台启动HTTP服务（端口8080），决策器通过它读取游戏状态</div>
+  </div>
+
+  <div class="step-card">
+    <h2>第二步：运行本地Agent</h2>
+    <p>下载本地端程序，它会自动连接游戏并把数据推送到云端。</p>
+    <ul>
+      <li>下载 <a href="/static/STS2决策器-本地端.zip" style="color:#4fc3f7;">STS2决策器-本地端.zip</a></li>
+      <li>解压到任意目录</li>
+      <li>双击运行 <code>启动决策器.bat</code></li>
+      <li>脚本会自动检查Python环境、连接游戏mod、启动Agent</li>
+    </ul>
+    <div class="tip">💡 确保游戏已经启动并进入主菜单，Agent才能连接成功</div>
+  </div>
+
+  <div class="step-card">
+    <h2>第三步：打开网页决策</h2>
+    <p>在浏览器中打开本网站，即可查看实时决策推荐。</p>
+    <ul>
+      <li><strong>当前对局</strong>：实时出牌推荐、怪物行为、牌序记忆</li>
+      <li><strong>历史对局</strong>：查看所有对局记录和战略复盘</li>
+      <li><strong>怪物图鉴</strong>：所有怪物的固定行为模式和应对策略</li>
+      <li><strong>卡牌图鉴</strong>：静默猎手全卡牌效果和流派搭配</li>
+      <li><strong>遗物图鉴</strong>：全遗物效果和稀有度</li>
+    </ul>
+    <div class="tip">💡 建议把网站添加到桌面（PWA），以后点图标就能打开</div>
+  </div>
+
+  <div class="step-card">
+    <h2>功能说明</h2>
+    <div class="feature-grid">
+      <div class="feature-item"><strong>⚔️ 战斗决策</strong>MCTS算法实时推荐最优出牌顺序</div>
+      <div class="feature-item"><strong>👹 怪物行为</strong>显示每只怪物的固定行动模式</div>
+      <div class="feature-item"><strong>🃏 牌序记忆</strong>SL后自动记住抽牌顺序</div>
+      <div class="feature-item"><strong>🗺️ 路线指导</strong>推荐地图最优路径</div>
+      <div class="feature-item"><strong>🎁 奖励选择</strong>选卡/遗物/药水推荐</div>
+      <div class="feature-item"><strong>🛒 商店购买</strong>评估商店物品性价比</div>
+      <div class="feature-item"><strong>📊 战略复盘</strong>对局结束后分析流派和改进建议</div>
+      <div class="feature-item"><strong>🤖 LLM分析</strong>接入大语言模型深度分析</div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <h2>常见问题</h2>
+    <p><strong>Q: Agent连接失败怎么办？</strong><br>A: 检查游戏是否已启动、mod是否已启用、端口8080是否被占用。</p>
+    <p><strong>Q: 网页显示"游戏未连接"？</strong><br>A: 确保本地Agent正在运行，且游戏已进入战斗或地图界面。</p>
+    <p><strong>Q: 如何安装为App？</strong><br>A: 在Chrome/Edge中打开网站，点击地址栏的安装图标，或在菜单中选择"安装应用"。</p>
+    <p><strong>Q: 数据会丢失吗？</strong><br>A> 对局历史自动同步到云端，换设备登录账号即可查看。</p>
+  </div>
+
+  <div class="step-card">
+    <h2>下载资源</h2>
+    <p>需要的所有文件都在这里：</p>
+    <a href="/static/STS2决策器-本地端.zip" class="download-btn">📥 下载本地端 (50KB)</a>
+    <a href="/static/使用指南.md" class="download-btn" style="background:#2d4a6a;color:#4fc3f7;margin-left:10px;">📄 下载使用指南</a>
+  </div>
+</div>
+</body></html>"""
+
+
+# ============ 下载页面 ============
+@app.route("/download")
+def download():
+    return render_template_string(DOWNLOAD_HTML)
+
+DOWNLOAD_HTML = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>下载 - STS2决策器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0f1923;color:#e0e6ed;min-height:100vh;}
+.nav-bar{background:#1a2a3a;border-bottom:1px solid #2d4a6a;padding:0;position:sticky;top:0;z-index:100;}
+.nav-bar .container{display:flex;align-items:center;gap:8px;max-width:900px;margin:0 auto;padding:8px 20px;overflow-x:auto;}
+.nav-bar a{color:#8899aa;text-decoration:none;font-size:13px;padding:8px 12px;border-radius:6px;white-space:nowrap;}
+.nav-bar a:hover{color:#4fc3f7;background:#0f1923;}
+.nav-bar a.active{color:#4fc3f7;background:#0f1923;}
+.nav-bar .nav-brand{color:#4fc3f7;font-weight:bold;font-size:15px;margin-right:8px;}
+.container{max-width:800px;margin:0 auto;padding:30px 20px;}
+h1{color:#4fc3f7;font-size:28px;margin-bottom:8px;}
+.subtitle{color:#8899aa;font-size:14px;margin-bottom:30px;}
+.download-card{background:#1a2a3a;border-radius:16px;padding:32px;margin-bottom:20px;border:1px solid #2d4a6a;text-align:center;}
+.download-card .icon{font-size:64px;margin-bottom:16px;}
+.download-card h2{color:#4fc3f7;font-size:24px;margin-bottom:8px;}
+.download-card p{color:#8899aa;font-size:14px;margin-bottom:20px;}
+.download-card .size{color:#66bb6a;font-size:13px;margin-bottom:16px;}
+.btn-primary{display:inline-block;padding:14px 32px;background:#4fc3f7;color:#0f1923;text-decoration:none;border-radius:10px;font-weight:bold;font-size:18px;}
+.btn-primary:hover{background:#81d4fa;}
+.btn-secondary{display:inline-block;padding:12px 24px;background:transparent;color:#4fc3f7;text-decoration:none;border:1px solid #4fc3f7;border-radius:8px;font-size:15px;margin-top:10px;}
+.file-list{text-align:left;margin-top:20px;padding:16px;background:#0f1923;border-radius:8px;}
+.file-list h3{color:#4fc3f7;font-size:14px;margin-bottom:10px;}
+.file-list ul{list-style:none;font-size:13px;color:#8899aa;line-height:2;}
+.file-list li::before{content:"📄 ";}
+.install-card{background:#1a2a3a;border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid #2d4a6a;}
+.install-card h2{color:#4fc3f7;font-size:20px;margin-bottom:12px;}
+.install-card ol{margin-left:20px;color:#c0c8d0;font-size:14px;line-height:2;}
+.install-card .platform{display:inline-block;padding:4px 10px;background:#0f1923;border-radius:4px;font-size:12px;color:#8899aa;margin-right:6px;}
+</style></head>
+<body>
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">STS2决策器</a>
+  <a href="/live">当前对局</a>
+  <a href="/history">历史对局</a>
+  <a href="/monsters">怪物图鉴</a>
+  <a href="/cards">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a>
+  <a href="/guide">使用指南</a>
+  <a href="/download" class="active">下载</a>
+</div></div>
+<div class="container">
+  <h1>📥 下载中心</h1>
+  <p class="subtitle">下载本地端程序，一键启动AI决策辅助</p>
+
+  <div class="download-card">
+    <div class="icon">🎮</div>
+    <h2>STS2 决策器 - 本地端</h2>
+    <p>包含本地Agent、启动脚本、使用指南，解压即用</p>
+    <div class="size">文件大小：约 50 KB · 格式：ZIP</div>
+    <a href="/static/STS2决策器-本地端.zip" class="btn-primary">立即下载</a>
+    <div class="file-list">
+      <h3>压缩包内容：</h3>
+      <ul>
+        <li>cloud_agent.py - 本地云端推送Agent</li>
+        <li>advisor/ - 决策器核心模块（MCTS、模拟器、卡牌库等）</li>
+        <li>启动决策器.bat - 一键启动脚本</li>
+        <li>使用指南.md - 详细使用说明</li>
+        <li>mod安装说明.txt - STS2 AI Agent mod安装指南</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="download-card" style="text-align:left;">
+    <h2 style="text-align:center;">📄 单独下载</h2>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:16px;">
+      <a href="/static/使用指南.md" class="btn-secondary">使用指南.md</a>
+      <a href="/static/STS2决策器-本地端.zip" class="btn-secondary">本地端.zip</a>
+    </div>
+  </div>
+
+  <div class="install-card">
+    <h2>📱 安装为App（PWA）</h2>
+    <p style="color:#8899aa;font-size:14px;margin-bottom:12px;">把网站安装到电脑/手机桌面，像App一样使用：</p>
+    <ol>
+      <li><span class="platform">Chrome/Edge</span> 点击地址栏右侧的安装图标（📥），或菜单 → "安装 STS2决策器"</li>
+      <li><span class="platform">Safari (iOS)</span> 点击分享按钮 → "添加到主屏幕"</li>
+      <li><span class="platform">Android</span> 菜单 → "添加到主屏幕" 或 "安装应用"</li>
+      <li>安装后桌面会出现图标，点击直接打开决策器</li>
+    </ol>
+  </div>
+
+  <div class="install-card">
+    <h2>⚡ 快速开始</h2>
+    <ol>
+      <li>下载并解压本地端压缩包</li>
+      <li>确保游戏已安装 STS2 AI Agent mod 并启动</li>
+      <li>双击运行 <code style="background:#0f1923;padding:2px 6px;border-radius:4px;color:#66bb6a;">启动决策器.bat</code></li>
+      <li>打开本网站，进入"当前对局"查看实时推荐</li>
+    </ol>
+    <p style="margin-top:16px;"><a href="/guide" style="color:#4fc3f7;">查看完整使用指南 →</a></p>
+  </div>
+</div>
+</body></html>"""
+
+
 # ============ 用户认证API ============
 @app.route("/api/auth/register", methods=["POST"])
 def api_register():
@@ -437,9 +659,39 @@ body { font-family:-apple-system,'Segoe UI',sans-serif; background:#0f1923; colo
 .status.online { background:#1b5e20; color:#66bb6a; }
 .status.offline { background:#b71c1c; color:#ef5350; }
 .footer { text-align:center; padding:20px; color:#556677; font-size:12px; margin-top:40px; }
+/* 导航栏 */
+.nav-bar { background:#1a2a3a; border-bottom:1px solid #2d4a6a; padding:0; position:sticky; top:0; z-index:100; }
+.nav-bar .container { display:flex; align-items:center; gap:8px; max-width:900px; margin:0 auto; padding:8px 20px; overflow-x:auto; }
+.nav-bar a { color:#8899aa; text-decoration:none; font-size:13px; padding:8px 12px; border-radius:6px; white-space:nowrap; transition:all .2s; }
+.nav-bar a:hover { color:#4fc3f7; background:#0f1923; }
+.nav-bar a.active { color:#4fc3f7; background:#0f1923; }
+.nav-bar .nav-brand { color:#4fc3f7; font-weight:bold; font-size:15px; margin-right:8px; }
+/* 首次访问弹窗 */
+.welcome-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+.welcome-modal.show { display:flex; }
+.welcome-box { background:#1a2a3a; border-radius:16px; padding:32px; max-width:480px; width:100%; border:2px solid #4fc3f7; box-shadow:0 20px 60px rgba(0,0,0,.5); }
+.welcome-box h2 { color:#4fc3f7; font-size:22px; margin-bottom:16px; }
+.welcome-box .step { display:flex; gap:12px; margin-bottom:16px; align-items:flex-start; }
+.welcome-box .step-num { background:#4fc3f7; color:#0f1923; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px; flex-shrink:0; }
+.welcome-box .step-text { color:#c0c8d0; font-size:14px; line-height:1.6; }
+.welcome-box .step-text strong { color:#e0e6ed; }
+.welcome-box .close-btn { width:100%; padding:12px; background:#4fc3f7; color:#0f1923; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; margin-top:8px; }
+.welcome-box .close-btn:hover { background:#81d4fa; }
+.welcome-box .skip-link { display:block; text-align:center; color:#556677; font-size:12px; margin-top:12px; cursor:pointer; text-decoration:underline; }
 </style>
 </head>
 <body>
+<!-- 导航栏 -->
+<div class="nav-bar"><div class="container">
+  <a href="/" class="nav-brand">STS2决策器</a>
+  <a href="/live">当前对局</a>
+  <a href="/history">历史对局</a>
+  <a href="/monsters">怪物图鉴</a>
+  <a href="/cards">卡牌图鉴</a>
+  <a href="/relics">遗物图鉴</a>
+  <a href="/guide">使用指南</a>
+  <a href="/download">下载</a>
+</div></div>
 <div class="header"><div class="container">
   <div><h1>STS2 决策器</h1><p>杀戮尖塔2 · 静默猎手AI教练 · 实时决策 + 战略复盘</p></div>
   <div class="user-menu" id="userMenu"><a href="/login">登录</a><a href="/register">注册</a></div>
@@ -451,6 +703,19 @@ body { font-family:-apple-system,'Segoe UI',sans-serif; background:#0f1923; colo
     <a class="card" href="/monsters"><div class="icon">👹</div><h3>怪物图鉴</h3><p>所有怪物的固定行为模式、伤害数值、应对策略</p></a>
     <a class="card" href="/cards"><div class="icon">🃏</div><h3>卡牌图鉴</h3><p>静默猎手全卡牌效果、升级对比、流派搭配推荐</p></a>
     <a class="card" href="/relics"><div class="icon">🏺</div><h3>遗物图鉴</h3><p>全遗物效果、稀有度、流派适配，含静默猎手专属和共享遗物</p></a>
+    <a class="card" href="/guide"><div class="icon">📖</div><h3>使用指南</h3><p>三步上手：安装mod → 运行Agent → 打开网页，开始AI辅助</p></a>
+    <a class="card" href="/download"><div class="icon">📥</div><h3>下载本地端</h3><p>下载本地Agent程序和使用指南，一键启动游戏自动决策</p></a>
+  </div>
+</div>
+<!-- 首次访问弹窗 -->
+<div class="welcome-modal" id="welcomeModal">
+  <div class="welcome-box">
+    <h2>👋 欢迎使用 STS2 决策器</h2>
+    <div class="step"><div class="step-num">1</div><div class="step-text"><strong>安装游戏mod</strong><br>下载并安装 STS2 AI Agent mod，让决策器能读取游戏状态</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>运行本地Agent</strong><br>下载本地端压缩包，运行启动脚本，自动连接游戏</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>打开网页决策</strong><br>在本网站查看实时推荐、怪物行为、牌序记忆和战略复盘</div></div>
+    <button class="close-btn" onclick="closeWelcome()">我知道了，开始使用</button>
+    <span class="skip-link" onclick="closeWelcome()">不再显示</span>
   </div>
 </div>
 <div class="footer">STS2 Advisor v8.0 · 基于MCTS+评估器 · 数据来自STS2 AI Agent mod</div>
@@ -468,6 +733,14 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
 // PWA Service Worker 注册
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
+}
+// 首次访问弹窗
+function closeWelcome(){
+  document.getElementById('welcomeModal').classList.remove('show');
+  localStorage.setItem('sts2_welcome_shown','1');
+}
+if(!localStorage.getItem('sts2_welcome_shown')){
+  setTimeout(()=>document.getElementById('welcomeModal').classList.add('show'),500);
 }
 </script>
 </body>
