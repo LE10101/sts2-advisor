@@ -342,7 +342,7 @@ h1{font-family:'Cinzel',serif;color:var(--gold);font-size:32px;margin-bottom:8px
 .feature-item strong{color:var(--gold);display:block;margin-bottom:6px;font-size:14px;}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
+<div class="game-nav"><div class="nav-inner">
   <a href="/" class="nav-brand">STS2决策器</a>
   <a href="/live">当前对局</a>
   <a href="/history">历史对局</a>
@@ -352,7 +352,7 @@ h1{font-family:'Cinzel',serif;color:var(--gold);font-size:32px;margin-bottom:8px
   <a href="/guide" class="active">使用指南</a>
   <a href="/download">下载</a>
 </div></div>
-<div class="container">
+<div class="guide-container">
   <h1>📖 使用指南</h1>
   <p class="subtitle">三步上手，用AI辅助你打好每一局静默猎手</p>
 
@@ -458,7 +458,7 @@ h1{font-family:'Cinzel',serif;color:var(--gold);font-size:32px;margin-bottom:8px
 .install-card .platform{display:inline-block;padding:4px 10px;background:var(--bg-dark);border-radius:4px;font-size:12px;color:var(--text-gray);margin-right:6px;border:1px solid var(--panel-border);}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
+<div class="game-nav"><div class="nav-inner">
   <a href="/" class="nav-brand">STS2决策器</a>
   <a href="/live">当前对局</a>
   <a href="/history">历史对局</a>
@@ -468,7 +468,7 @@ h1{font-family:'Cinzel',serif;color:var(--gold);font-size:32px;margin-bottom:8px
   <a href="/guide">使用指南</a>
   <a href="/download" class="active">下载</a>
 </div></div>
-<div class="container">
+<div class="download-container">
   <h1>📥 下载中心</h1>
   <p class="subtitle">下载本地端程序，一键启动AI决策辅助</p>
 
@@ -662,7 +662,7 @@ INDEX_HTML = """<!DOCTYPE html>
 </head>
 <body>
 <!-- 导航栏 -->
-<div class="nav-bar"><div class="container">
+<div class="game-nav"><div class="nav-inner">
   <a href="/" class="nav-brand">⚔️ STS2决策器</a>
   <a href="/live">当前对局</a>
   <a href="/history">历史对局</a>
@@ -736,7 +736,7 @@ LOGIN_HTML = """<!DOCTYPE html>
 .error{background:rgba(184,64,64,.15);border:1px solid var(--red);color:var(--red-light);padding:10px 14px;border-radius:4px;margin-bottom:16px;font-size:13px;}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
+<div class="game-nav"><div class="nav-inner">
   <a href="/" class="nav-brand">⚔️ STS2决策器</a>
   <a href="/live">当前对局</a><a href="/history">历史对局</a>
   <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
@@ -772,7 +772,7 @@ REGISTER_HTML = """<!DOCTYPE html>
 .error{background:rgba(184,64,64,.15);border:1px solid var(--red);color:var(--red-light);padding:10px 14px;border-radius:4px;margin-bottom:16px;font-size:13px;}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
+<div class="game-nav"><div class="nav-inner">
   <a href="/" class="nav-brand">⚔️ STS2决策器</a>
   <a href="/live">当前对局</a><a href="/history">历史对局</a>
   <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
@@ -831,7 +831,7 @@ LIVE_HTML = """<!DOCTYPE html>
 .disconnected h2{color:var(--gold);margin-bottom:8px;}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
+<div class="game-nav"><div class="nav-inner">
   <a href="/" class="nav-brand">⚔️ STS2决策器</a>
   <a href="/live" class="active">当前对局</a><a href="/history">历史对局</a>
   <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
@@ -909,7 +909,7 @@ HISTORY_HTML = """<!DOCTYPE html>
 .empty .icon{font-size:48px;margin-bottom:12px;}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
+<div class="game-nav"><div class="nav-inner">
   <a href="/" class="nav-brand">⚔️ STS2决策器</a>
   <a href="/live">当前对局</a><a href="/history" class="active">历史对局</a>
   <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
@@ -961,25 +961,24 @@ MONSTERS_HTML = """<!DOCTYPE html>
 <link rel="stylesheet" href="/static/game-theme.css">
 <title>怪物图鉴 - STS2决策器</title>
 <style>
-.empty{text-align:center;padding:40px;color:var(--text-dim);}
+.empty{text-align:center;padding:40px;color:var(--text-dim);font-size:14px;}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
-  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+<div class="game-nav"><div class="nav-inner">
+  <a href="/" class="brand">⚔️ STS2</a>
   <a href="/live">当前对局</a><a href="/history">历史对局</a>
   <a href="/monsters" class="active">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
-  <a href="/relics">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+  <a href="/relics">遗物图鉴</a><a href="/guide">指南</a><a href="/download">下载</a>
 </div></div>
-<div class="page-header"><h1>👹 怪物图鉴</h1><p>所有怪物的固定行为模式 · 伤害数值 · 应对策略</p></div>
-<div class="monster-layout">
-  <div class="monster-actions">
+<div class="monster-three-col">
+  <div class="monster-actions-col">
     <h3>行动列表</h3>
-    <div id="actions"><div class="empty" style="padding:20px;font-size:13px;">选择怪物查看行动</div></div>
+    <div id="actions"><div class="empty">选择怪物查看行动</div></div>
   </div>
-  <div class="monster-display" id="display">
+  <div class="monster-center-col" id="display">
     <div style="color:var(--text-dim);font-size:16px;">← 从右侧选择怪物</div>
   </div>
-  <div class="monster-list" id="list"></div>
+  <div class="monster-list-col" id="list"></div>
 </div>
 <script>
 let allMonsters=[];
@@ -993,11 +992,11 @@ function renderList(){
   allMonsters.forEach(m=>{const c=m.chapter||'未知';if(!chapters[c])chapters[c]=[];chapters[c].push(m);});
   let html='';
   Object.entries(chapters).forEach(([ch,monsters])=>{
-    html+='<div class="monster-chapter"><div class="monster-chapter-title">'+ch+' ('+monsters.length+')</div>';
+    html+='<div class="monster-chapter"><div class="monster-chapter-title">'+ch+'</div>';
     monsters.forEach(m=>{
       const cls=m.is_elite?'elite':(m.is_boss?'boss':'');
       html+='<div class="monster-list-item '+cls+'" data-id="'+m.id+'" onclick="selectMonster(''+m.id+'')">'+
-        (m.image_url?'<img src="'+m.image_url+'" style="width:24px;height:24px;object-fit:contain;">':'👹')+m.name+'</div>';
+        (m.image_url?'<img src="'+m.image_url+'" style="width:22px;height:22px;object-fit:contain;">':'👹')+m.name+'</div>';
     });
     html+='</div>';
   });
@@ -1009,15 +1008,15 @@ function selectMonster(id){
   document.querySelector('[data-id="'+id+'"]')?.classList.add('selected');
   document.getElementById('display').innerHTML=
     (m.image_url?'<img src="'+m.image_url+'" onerror="this.style.display='none'">':'')+
-    '<div class="monster-name">'+m.name+'</div>'+
-    (m.hp?'<div class="monster-hp">❤️ '+m.hp+'</div>':'')+
-    (m.strategy?'<div style="margin-top:16px;padding:12px;background:rgba(90,138,74,.1);border-left:3px solid var(--green);border-radius:4px;max-width:400px;font-size:13px;color:var(--text-cream);line-height:1.6;"><strong style="color:var(--green-bright);">应对策略</strong><br>'+m.strategy+'</div>':'');
+    '<div class="m-name">'+m.name+'</div>'+
+    (m.hp?'<div class="m-hp">❤️ '+m.hp+'</div>':'')+
+    (m.strategy?'<div class="m-strategy"><strong style="color:var(--green-light);">应对策略</strong><br>'+m.strategy+'</div>':'');
   const actions=m.actions||[];
   document.getElementById('actions').innerHTML=actions.length?
-    actions.map(a=>'<div class="monster-action-item"><div class="action-name">'+a.name+'</div>'+
-    (a.damage?'<div class="action-damage">伤害: '+a.damage+'</div>':'')+
+    actions.map(a=>'<div class="monster-action"><div class="a-name">'+a.name+'</div>'+
+    (a.damage?'<div class="a-dmg">伤害: '+a.damage+'</div>':'')+
     (a.effect?'<div style="font-size:11px;color:var(--text-gray);margin-top:2px;">'+a.effect+'</div>':'')+'</div>').join('')
-    :'<div class="empty" style="padding:20px;font-size:13px;">暂无行动数据</div>';
+    :'<div class="empty">暂无行动数据</div>';
 }
 </script>
 </body></html>"""
@@ -1026,80 +1025,98 @@ CARDS_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/static/game-theme.css">
-<title>卡牌图鉴 - STS2决策器</title>
+<title>卡牌总览 - STS2决策器</title>
 <style>
-.stats-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;max-width:1400px;margin-left:auto;margin-right:auto;padding:0 20px;}
-.stat-item{background:linear-gradient(180deg,#2a2018,#1a120c);padding:8px 16px;border-radius:4px;border:1px solid #4a3a25;text-align:center;}
-.stat-item .num{font-size:20px;font-weight:700;color:var(--gold);font-family:'Cinzel',serif;}
-.stat-item .label{font-size:11px;color:var(--text-gray);margin-top:2px;}
-.empty{text-align:center;padding:60px;color:var(--text-dim);grid-column:1/-1;font-size:16px;}
+.codex-stats{display:flex;gap:8px;padding:10px 20px;background:rgba(0,0,0,.3);border-bottom:1px solid var(--border-dark);flex-wrap:wrap;}
+.codex-stats .st{padding:4px 10px;background:rgba(255,255,255,.03);border-radius:3px;font-size:12px;color:var(--text-gray);}
+.codex-stats .st b{color:var(--gold);}
+.empty{text-align:center;padding:60px;color:var(--text-dim);grid-column:1/-1;}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
-  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+<div class="game-nav"><div class="nav-inner">
+  <a href="/" class="brand">⚔️ STS2</a>
   <a href="/live">当前对局</a><a href="/history">历史对局</a>
   <a href="/monsters">怪物图鉴</a><a href="/cards" class="active">卡牌图鉴</a>
-  <a href="/relics">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+  <a href="/relics">遗物图鉴</a><a href="/guide">指南</a><a href="/download">下载</a>
 </div></div>
-<div class="page-header"><h1>🃏 卡牌图鉴</h1><p>静默猎手 · 全卡牌效果与升级对比</p></div>
-<div class="filter-bar">
-  <input type="text" class="search-input" id="search" placeholder="搜索卡牌名称、效果..." oninput="renderCards()">
-  <button class="filter-btn active" data-filter="all">全部</button>
-  <button class="filter-btn" data-filter="攻击">攻击</button>
-  <button class="filter-btn" data-filter="技能">技能</button>
-  <button class="filter-btn" data-filter="能力">能力</button>
-  <button class="filter-btn" data-filter="基础">基础</button>
-  <button class="filter-btn" data-filter="普通">普通</button>
-  <button class="filter-btn" data-filter="罕见">罕见</button>
-  <button class="filter-btn" data-filter="稀有">稀有</button>
+<div class="codex-layout">
+  <div class="codex-sidebar">
+    <input type="text" class="search-box" id="search" placeholder="搜索卡牌..." oninput="renderCards()">
+    <div class="filter-group">
+      <div class="filter-label">类型</div>
+      <button class="filter-option active" data-f="all">全部</button>
+      <button class="filter-option" data-f="攻击">攻击</button>
+      <button class="filter-option" data-f="技能">技能</button>
+      <button class="filter-option" data-f="能力">能力</button>
+      <button class="filter-option" data-f="诅咒">诅咒</button>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">稀有度</div>
+      <button class="filter-option" data-r="基础">基础</button>
+      <button class="filter-option" data-r="普通">普通</button>
+      <button class="filter-option" data-r="罕见">罕见</button>
+      <button class="filter-option" data-r="稀有">稀有</button>
+    </div>
+    <div class="filter-group">
+      <div class="filter-label">费用</div>
+      <button class="filter-option" data-c="0">0费</button>
+      <button class="filter-option" data-c="1">1费</button>
+      <button class="filter-option" data-c="2">2费</button>
+      <button class="filter-option" data-c="3">3费+</button>
+    </div>
+  </div>
+  <div class="codex-main">
+    <div class="codex-stats" id="stats"></div>
+    <div class="codex-card-grid" id="grid" style="padding:16px 0;"></div>
+  </div>
 </div>
-<div class="stats-bar" id="stats"></div>
-<div class="codex-section"><div class="card-grid-codex" id="grid"></div></div>
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal-box"><button class="close-btn" onclick="closeModal()">×</button><div id="modal-content"></div></div>
+  <div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-content"></div></div>
 </div>
 <script>
-let allCards=[],currentFilter='all';
+let allCards=[],curF='all',curR=null,curC=null;
 fetch('/api/cards').then(r=>r.json()).then(d=>{allCards=d.cards||[];renderStats();renderCards();});
 function renderStats(){
   const s={};allCards.forEach(c=>{s[c.rarity]=(s[c.rarity]||0)+1;});
-  document.getElementById('stats').innerHTML='<div class="stat-item"><div class="num">'+allCards.length+'</div><div class="label">卡牌总数</div></div>'+
-    Object.entries(s).map(([r,n])=>'<div class="stat-item"><div class="num">'+n+'</div><div class="label">'+r+'</div></div>').join('');
+  document.getElementById('stats').innerHTML='<div class="st"><b>'+allCards.length+'</b> 张卡牌</div>'+
+    Object.entries(s).map(([r,n])=>'<div class="st"><b>'+n+'</b> '+r+'</div>').join('');
 }
-document.getElementById('filters')?.addEventListener('click',e=>{});
-document.querySelector('.filter-bar').addEventListener('click',e=>{
-  if(e.target.classList.contains('filter-btn')){
-    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-    e.target.classList.add('active');currentFilter=e.target.dataset.filter;renderCards();
+document.querySelector('.codex-sidebar').addEventListener('click',e=>{
+  if(e.target.classList.contains('filter-option')){
+    const f=e.target.dataset.f,r=e.target.dataset.r,c=e.target.dataset.c;
+    e.target.parentElement.querySelectorAll('.filter-option').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    if(f!==undefined){curF=f;}
+    if(r!==undefined){curR=curR===r?null:r;if(curR)e.target.classList.add('active');}
+    if(c!==undefined){curC=curC===c?null:c;if(curC)e.target.classList.add('active');}
+    renderCards();
   }
 });
-function typeClass(t){if(t==='攻击')return'type-attack';if(t==='技能')return'type-skill';if(t==='能力')return'type-power';if(t==='诅咒')return'type-curse';return'';}
 function renderCards(){
   const q=document.getElementById('search').value.toLowerCase();
   let list=allCards;
-  if(currentFilter!=='all')list=list.filter(c=>c.rarity===currentFilter||c.type===currentFilter);
+  if(curF!=='all')list=list.filter(c=>c.type===curF);
+  if(curR)list=list.filter(c=>c.rarity===curR);
+  if(curC){if(curC==='3')list=list.filter(c=>c.cost>=3);else list=list.filter(c=>c.cost==parseInt(curC));}
   if(q)list=list.filter(c=>c.name_cn.toLowerCase().includes(q)||c.name_en.toLowerCase().includes(q)||c.effect.toLowerCase().includes(q));
   const el=document.getElementById('grid');
   if(!list.length){el.innerHTML='<div class="empty">未找到卡牌</div>';return;}
-  el.innerHTML=list.map(c=>'<div class="game-card '+typeClass(c.type)+'" onclick="showDetail(\''+c.id+'\')">'+
-    '<div class="card-cost">'+c.cost+'</div>'+
-    (c.image_url?'<img class="card-image" src="'+c.image_url+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'">':'')+
-    '<div class="card-image" style="display:none;align-items:center;justify-content:center;font-size:48px;">🃏</div>'+
-    '<div class="card-name-ribbon"><div class="card-name">'+c.name_cn+'</div></div>'+
-    '<div class="card-type">'+c.type+' · '+c.rarity+'</div>'+
-    '<div class="card-desc">'+c.effect+'</div></div>').join('');
+  el.innerHTML=list.map(c=>{
+    const img=c.image_url?'<img class="game-card-img" src="'+c.image_url+'" onclick="showDetail(''+c.id+'')" onerror="this.outerHTML='<div style=\'width:100%;height:260px;background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:48px;cursor:pointer;\' onclick=\'showDetail("'+c.id+'")\'>🃏</div>'">':
+    '<div style="width:100%;height:260px;background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:48px;cursor:pointer;" onclick="showDetail(''+c.id+'')">🃏</div>';
+    return img;
+  }).join('');
 }
 function showDetail(id){
   const c=allCards.find(x=>x.id===id);if(!c)return;
   document.getElementById('modal-content').innerHTML=
-    '<h2>'+c.name_cn+' <span style="font-size:14px;color:var(--text-gray);">'+c.name_en+'</span></h2>'+
     '<div style="display:flex;gap:20px;align-items:flex-start;">'+
-    (c.image_url?'<img src="'+c.image_url+'" style="width:160px;border-radius:6px;border:2px solid var(--gold-dark);">':'')+
+    (c.image_url?'<img src="'+c.image_url+'" style="width:200px;border-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,.6);">':'')+
     '<div style="flex:1;">'+
-    '<div class="form-group"><label>费用</label><div style="color:var(--text-cream);font-size:18px;">'+c.cost+'</div></div>'+
-    '<div class="form-group"><label>类型 / 稀有度</label><div style="color:var(--text-cream);">'+c.type+' · '+c.rarity+'</div></div>'+
+    '<h2>'+c.name_cn+'</h2>'+
+    '<div style="color:var(--text-gray);font-size:13px;margin-bottom:14px;">'+c.name_en+' · '+c.type+' · '+c.rarity+' · '+c.cost+'费</div>'+
     '<div class="form-group"><label>效果</label><div style="color:var(--text-cream);line-height:1.7;">'+c.effect+'</div></div>'+
-    (c.upgraded?'<div class="form-group"><label>升级效果</label><div style="color:var(--green-bright);line-height:1.7;">'+c.upgraded+'</div></div>':'')+
+    (c.upgraded?'<div class="form-group"><label>升级效果</label><div style="color:var(--green-light);line-height:1.7;">'+c.upgraded+'</div></div>':'')+
     (c.synergy?'<div class="form-group"><label>流派适配</label><div style="color:var(--text-cream);line-height:1.7;">'+c.synergy+'</div></div>':'')+
     '</div></div>';
   document.getElementById('modal').classList.add('show');
@@ -1113,51 +1130,35 @@ RELICS_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="/static/game-theme.css">
-<title>遗物图鉴 - STS2决策器</title>
+<title>遗物收集 - STS2决策器</title>
 <style>
-.stats-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;max-width:1400px;margin-left:auto;margin-right:auto;padding:0 20px;}
-.stat-item{background:linear-gradient(180deg,#2a2018,#1a120c);padding:8px 16px;border-radius:4px;border:1px solid #4a3a25;text-align:center;}
-.stat-item .num{font-size:20px;font-weight:700;color:var(--gold);font-family:'Cinzel',serif;}
-.stat-item .label{font-size:11px;color:var(--text-gray);margin-top:2px;}
-.empty{text-align:center;padding:60px;color:var(--text-dim);grid-column:1/-1;font-size:16px;}
+.relic-toolbar{display:flex;gap:8px;padding:12px 20px;background:rgba(0,0,0,.3);border-bottom:1px solid var(--border-dark);align-items:center;flex-wrap:wrap;}
+.relic-toolbar input{padding:7px 12px;background:var(--bg-black);border:1px solid var(--border-dark);border-radius:3px;color:var(--text-white);font-size:13px;font-family:'Kreon',serif;outline:none;min-width:200px;}
+.relic-toolbar input:focus{border-color:var(--gold-dim);}
+.empty{text-align:center;padding:40px;color:var(--text-dim);}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
-  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
+<div class="game-nav"><div class="nav-inner">
+  <a href="/" class="brand">⚔️ STS2</a>
   <a href="/live">当前对局</a><a href="/history">历史对局</a>
   <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
-  <a href="/relics" class="active">遗物图鉴</a><a href="/guide">使用指南</a><a href="/download">下载</a>
+  <a href="/relics" class="active">遗物图鉴</a><a href="/guide">指南</a><a href="/download">下载</a>
 </div></div>
-<div class="page-header"><h1>🏺 遗物图鉴</h1><p>全遗物效果 · 稀有度 · 流派适配</p></div>
-<div class="filter-bar">
-  <input type="text" class="search-input" id="search" placeholder="搜索遗物名称或效果..." oninput="renderRelics()">
-  <button class="filter-btn active" data-filter="all">全部</button>
-  <button class="filter-btn" data-filter="silent">静默猎手</button>
-  <button class="filter-btn" data-filter="shared">共享</button>
-  <button class="filter-btn" data-filter="初始">初始</button>
-  <button class="filter-btn" data-filter="普通">普通</button>
-  <button class="filter-btn" data-filter="罕见">罕见</button>
-  <button class="filter-btn" data-filter="稀有">稀有</button>
-  <button class="filter-btn" data-filter="Boss">Boss</button>
+<div class="relic-toolbar">
+  <input type="text" id="search" placeholder="搜索遗物..." oninput="renderRelics()">
+  <span style="color:var(--text-gray);font-size:13px;" id="total"></span>
 </div>
-<div class="stats-bar" id="stats"></div>
-<div class="codex-section"><div class="relic-grid" id="grid"></div></div>
+<div id="relicContent"></div>
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal-box"><button class="close-btn" onclick="closeModal()">×</button><div id="modal-content"></div></div>
+  <div class="modal-box"><button class="close" onclick="closeModal()">×</button><div id="modal-content"></div></div>
 </div>
 <script>
-let allRelics=[],currentFilter='all';
-fetch('/api/relics').then(r=>r.json()).then(d=>{allRelics=d.relics||[];renderStats();renderRelics();});
-function renderStats(){
-  const s={};allRelics.forEach(r=>{s[r.rarity]=(s[r.rarity]||0)+1;});
-  document.getElementById('stats').innerHTML='<div class="stat-item"><div class="num">'+allRelics.length+'</div><div class="label">遗物总数</div></div>'+
-    Object.entries(s).map(([r,n])=>'<div class="stat-item"><div class="num">'+n+'</div><div class="label">'+r+'</div></div>').join('');
-}
-document.querySelector('.filter-bar').addEventListener('click',e=>{
-  if(e.target.classList.contains('filter-btn')){
-    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-    e.target.classList.add('active');currentFilter=e.target.dataset.filter;renderRelics();
-  }
+let allRelics=[];
+const rarityOrder=['初始','普通','罕见','稀有','古代','先古','Boss','事件','商店'];
+fetch('/api/relics').then(r=>r.json()).then(d=>{
+  allRelics=d.relics||[];
+  document.getElementById('total').textContent='共 '+allRelics.length+' 个遗物';
+  renderRelics();
 });
 function rarityClass(r){
   if(r==='初始')return'rarity-starter';if(r==='普通')return'rarity-common';
@@ -1168,24 +1169,51 @@ function rarityClass(r){
 function renderRelics(){
   const q=document.getElementById('search').value.toLowerCase();
   let list=allRelics;
-  if(currentFilter!=='all')list=list.filter(r=>r.rarity===currentFilter||r.pool===currentFilter);
   if(q)list=list.filter(r=>r.name.toLowerCase().includes(q)||r.name_en.toLowerCase().includes(q)||r.effect.toLowerCase().includes(q));
-  const el=document.getElementById('grid');
-  if(!list.length){el.innerHTML='<div class="empty">未找到遗物</div>';return;}
-  el.innerHTML=list.map(r=>'<div class="relic-item '+rarityClass(r.rarity)+'" onclick="showDetail(''+r.id+'')">'+
-    (r.image_url?'<img src="'+r.image_url+'" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">':'')+
-    '<div style="display:none;width:56px;height:56px;align-items:center;justify-content:center;font-size:32px;margin:0 auto 6px;">🏺</div>'+
-    '<div class="relic-name">'+r.name+'</div></div>').join('');
+  const groups={};
+  list.forEach(r=>{if(!groups[r.rarity])groups[r.rarity]=[];groups[r.rarity].push(r);});
+  let html='<div class="relic-section-group">';
+  rarityOrder.forEach(r=>{
+    if(groups[r]&&groups[r].length){
+      html+='<div class="relic-group-title">'+r+' <span class="count">('+groups[r].length+')</span></div>';
+      html+='<div class="relic-icon-grid">';
+      groups[r].forEach(rel=>{
+        html+='<div class="relic-icon '+rarityClass(r)+'" onclick="showDetail(''+rel.id+'')">'+
+          (rel.image_url?'<img src="'+rel.image_url+'" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">':'')+
+          '<div style="display:none;width:48px;height:48px;align-items:center;justify-content:center;font-size:28px;margin:0 auto 4px;">🏺</div>'+
+          '<div class="name">'+rel.name+'</div>'+
+          '<div class="tooltip"><div class="t-name">'+rel.name+'</div><div class="t-effect">'+rel.effect+'</div></div>'+
+          '</div>';
+      });
+      html+='</div>';
+    }
+  });
+  Object.entries(groups).forEach(([r,items])=>{
+    if(!rarityOrder.includes(r)){
+      html+='<div class="relic-group-title">'+r+' <span class="count">('+items.length+')</span></div>';
+      html+='<div class="relic-icon-grid">';
+      items.forEach(rel=>{
+        html+='<div class="relic-icon '+rarityClass(r)+'" onclick="showDetail(''+rel.id+'')">'+
+          (rel.image_url?'<img src="'+rel.image_url+'" onerror="this.style.display='none'">':'')+
+          '<div class="name">'+rel.name+'</div>'+
+          '<div class="tooltip"><div class="t-name">'+rel.name+'</div><div class="t-effect">'+rel.effect+'</div></div></div>';
+      });
+      html+='</div>';
+    }
+  });
+  html+='</div>';
+  if(!list.length)html='<div class="empty">未找到遗物</div>';
+  document.getElementById('relicContent').innerHTML=html;
 }
 function showDetail(id){
   const r=allRelics.find(x=>x.id===id);if(!r)return;
   document.getElementById('modal-content').innerHTML=
     '<div style="display:flex;gap:20px;align-items:center;margin-bottom:16px;">'+
-    (r.image_url?'<img src="'+r.image_url+'" style="width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));">':'')+
+    (r.image_url?'<img src="'+r.image_url+'" style="width:64px;height:64px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6));">':'')+
     '<div><h2 style="margin:0;">'+r.name+'</h2><div style="color:var(--text-gray);font-size:13px;">'+r.name_en+' · '+r.rarity+' · '+(r.pool==='silent'?'静默猎手专属':'共享')+'</div></div></div>'+
     '<div class="form-group"><label>效果</label><div style="color:var(--text-cream);line-height:1.7;">'+r.effect+'</div></div>'+
     (r.description?'<div class="form-group"><label>说明</label><div style="color:var(--text-cream);line-height:1.7;">'+r.description+'</div></div>':'')+
-    (r.synergy?'<div class="form-group"><label>流派适配</label><div style="color:var(--green-bright);line-height:1.7;">'+r.synergy+'</div></div>':'');
+    (r.synergy?'<div class="form-group"><label>流派适配</label><div style="color:var(--green-light);line-height:1.7;">'+r.synergy+'</div></div>':'');
   document.getElementById('modal').classList.add('show');
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');}
@@ -1241,7 +1269,7 @@ body{font-family:'Kreon','Georgia',serif;}
 .loading{text-align:center;padding:60px;color:var(--text-dim);font-size:16px;}
 </style></head>
 <body>
-<div class="nav-bar"><div class="container">
+<div class="game-nav"><div class="nav-inner">
   <a href="/" class="nav-brand">⚔️ STS2决策器</a>
   <a href="/live">当前对局</a><a href="/history" class="active">历史对局</a>
   <a href="/monsters">怪物图鉴</a><a href="/cards">卡牌图鉴</a>
