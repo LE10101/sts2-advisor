@@ -265,15 +265,15 @@ def api_analysis(run_id):
 
 @app.route("/api/monsters")
 def api_monsters():
-    from advisor.monsters import MONSTER_DB
-    return jsonify({"monsters": MONSTER_DB})
+    from advisor.monsters import MONSTERS
+    return jsonify({"monsters": MONSTERS})
 
 
 @app.route("/api/monsters/<monster_id>")
 def api_monster_detail(monster_id):
     """怪物详情API"""
-    from advisor.monsters import MONSTER_DB
-    for m in MONSTER_DB:
+    from advisor.monsters import MONSTERS
+    for m in MONSTERS:
         if m.get("id") == monster_id or m.get("name") == monster_id:
             return jsonify({"monster": m})
     return jsonify({"error": "怪物未找到"}), 404
@@ -281,17 +281,17 @@ def api_monster_detail(monster_id):
 
 @app.route("/api/cards")
 def api_cards():
-    from advisor.cards_db import SILENT_CARDS, CARD_STATS
-    return jsonify({"cards": SILENT_CARDS, "stats": CARD_STATS})
+    from advisor.cards_db import CARDS
+    return jsonify({"cards": CARDS})
 
 
 @app.route("/api/cards/<card_name>")
 def api_card_detail(card_name):
     """卡牌详情API"""
-    from advisor.cards_db import get_card_by_name
-    c = get_card_by_name(card_name)
-    if c:
-        return jsonify({"card": c})
+    from advisor.cards_db import CARDS
+    for c in CARDS:
+        if c.get("id") == card_name or c.get("name_cn") == card_name or c.get("name_en") == card_name:
+            return jsonify({"card": c})
     return jsonify({"error": "卡牌未找到"}), 404
 
 
@@ -302,16 +302,16 @@ def relics():
 
 @app.route("/api/relics")
 def api_relics():
-    from advisor.relics_db import RELICS, RELIC_STATS
-    return jsonify({"relics": RELICS, "stats": RELIC_STATS})
+    from advisor.relics_db import RELICS
+    return jsonify({"relics": RELICS})
 
 @app.route("/api/relics/<relic_name>")
 def api_relic_detail(relic_name):
     """遗物详情API"""
-    from advisor.relics_db import get_relic_by_name
-    r = get_relic_by_name(relic_name)
-    if r:
-        return jsonify({"relic": r})
+    from advisor.relics_db import RELICS
+    for r in RELICS:
+        if r.get("id") == relic_name or r.get("name") == relic_name or r.get("name_en") == relic_name:
+            return jsonify({"relic": r})
     return jsonify({"error": "遗物未找到"}), 404
 
 
