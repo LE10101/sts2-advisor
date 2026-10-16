@@ -323,31 +323,23 @@ def guide():
 GUIDE_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>使用指南 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0f1923;color:#e0e6ed;min-height:100vh;}
-.nav-bar{background:#1a2a3a;border-bottom:1px solid #2d4a6a;padding:0;position:sticky;top:0;z-index:100;}
-.nav-bar .container{display:flex;align-items:center;gap:8px;max-width:900px;margin:0 auto;padding:8px 20px;overflow-x:auto;}
-.nav-bar a{color:#8899aa;text-decoration:none;font-size:13px;padding:8px 12px;border-radius:6px;white-space:nowrap;}
-.nav-bar a:hover{color:#4fc3f7;background:#0f1923;}
-.nav-bar a.active{color:#4fc3f7;background:#0f1923;}
-.nav-bar .nav-brand{color:#4fc3f7;font-weight:bold;font-size:15px;margin-right:8px;}
 .container{max-width:800px;margin:0 auto;padding:30px 20px;}
-h1{color:#4fc3f7;font-size:28px;margin-bottom:8px;}
-.subtitle{color:#8899aa;font-size:14px;margin-bottom:30px;}
-.step-card{background:#1a2a3a;border-radius:12px;padding:24px;margin-bottom:20px;border-left:4px solid #4fc3f7;}
-.step-card h2{color:#4fc3f7;font-size:20px;margin-bottom:12px;}
-.step-card p{color:#c0c8d0;font-size:15px;line-height:1.8;margin-bottom:10px;}
-.step-card code{background:#0f1923;padding:2px 8px;border-radius:4px;color:#66bb6a;font-size:13px;}
-.step-card ul{margin-left:20px;color:#c0c8d0;font-size:14px;line-height:2;}
-.step-card .tip{background:#1b5e20;padding:12px 16px;border-radius:8px;color:#66bb6a;font-size:13px;margin-top:12px;}
-.step-card .warn{background:#b71c1c;padding:12px 16px;border-radius:8px;color:#ef5350;font-size:13px;margin-top:12px;}
-.download-btn{display:inline-block;padding:12px 24px;background:#4fc3f7;color:#0f1923;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;margin-top:10px;}
-.download-btn:hover{background:#81d4fa;}
+h1{font-family:'Cinzel',serif;color:var(--gold);font-size:32px;margin-bottom:8px;text-shadow:0 2px 10px rgba(0,0,0,.5);}
+.subtitle{color:var(--text-gray);font-size:14px;margin-bottom:30px;}
+.step-card{background:linear-gradient(135deg,#2a2018 0%,#1a1410 100%);border:2px solid #4a3a25;border-radius:12px;padding:24px;margin-bottom:20px;border-left:4px solid var(--gold);}
+.step-card h2{font-family:'Cinzel',serif;color:var(--gold);font-size:22px;margin-bottom:12px;}
+.step-card p{color:var(--text-white);font-size:15px;line-height:1.8;margin-bottom:10px;}
+.step-card code{background:var(--bg-dark);padding:2px 8px;border-radius:4px;color:var(--green-light);font-size:13px;}
+.step-card ul{margin-left:20px;color:var(--text-white);font-size:14px;line-height:2;}
+.step-card .tip{background:rgba(90,154,90,.15);padding:12px 16px;border-radius:8px;color:var(--green-light);font-size:13px;margin-top:12px;border-left:3px solid var(--green);}
+.download-btn{display:inline-block;padding:12px 24px;background:linear-gradient(180deg,var(--gold-dark) 0%,#8a6820 100%);color:#1a1410;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;margin-top:10px;border:2px solid var(--gold);}
+.download-btn:hover{background:linear-gradient(180deg,var(--gold) 0%,var(--gold-dark) 100%);}
 .feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:16px;}
-.feature-item{background:#0f1923;padding:12px;border-radius:8px;font-size:13px;color:#8899aa;}
-.feature-item strong{color:#4fc3f7;display:block;margin-bottom:4px;}
+.feature-item{background:var(--bg-dark);padding:14px;border-radius:8px;font-size:13px;color:var(--text-gray);border:1px solid var(--panel-border);}
+.feature-item strong{color:var(--gold);display:block;margin-bottom:6px;font-size:14px;}
 </style></head>
 <body>
 <div class="nav-bar"><div class="container">
@@ -441,35 +433,29 @@ def download():
 DOWNLOAD_HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>下载 - STS2决策器</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:-apple-system,'Segoe UI',sans-serif;background:#0f1923;color:#e0e6ed;min-height:100vh;}
-.nav-bar{background:#1a2a3a;border-bottom:1px solid #2d4a6a;padding:0;position:sticky;top:0;z-index:100;}
-.nav-bar .container{display:flex;align-items:center;gap:8px;max-width:900px;margin:0 auto;padding:8px 20px;overflow-x:auto;}
-.nav-bar a{color:#8899aa;text-decoration:none;font-size:13px;padding:8px 12px;border-radius:6px;white-space:nowrap;}
-.nav-bar a:hover{color:#4fc3f7;background:#0f1923;}
-.nav-bar a.active{color:#4fc3f7;background:#0f1923;}
-.nav-bar .nav-brand{color:#4fc3f7;font-weight:bold;font-size:15px;margin-right:8px;}
 .container{max-width:800px;margin:0 auto;padding:30px 20px;}
-h1{color:#4fc3f7;font-size:28px;margin-bottom:8px;}
-.subtitle{color:#8899aa;font-size:14px;margin-bottom:30px;}
-.download-card{background:#1a2a3a;border-radius:16px;padding:32px;margin-bottom:20px;border:1px solid #2d4a6a;text-align:center;}
-.download-card .icon{font-size:64px;margin-bottom:16px;}
-.download-card h2{color:#4fc3f7;font-size:24px;margin-bottom:8px;}
-.download-card p{color:#8899aa;font-size:14px;margin-bottom:20px;}
-.download-card .size{color:#66bb6a;font-size:13px;margin-bottom:16px;}
-.btn-primary{display:inline-block;padding:14px 32px;background:#4fc3f7;color:#0f1923;text-decoration:none;border-radius:10px;font-weight:bold;font-size:18px;}
-.btn-primary:hover{background:#81d4fa;}
-.btn-secondary{display:inline-block;padding:12px 24px;background:transparent;color:#4fc3f7;text-decoration:none;border:1px solid #4fc3f7;border-radius:8px;font-size:15px;margin-top:10px;}
-.file-list{text-align:left;margin-top:20px;padding:16px;background:#0f1923;border-radius:8px;}
-.file-list h3{color:#4fc3f7;font-size:14px;margin-bottom:10px;}
-.file-list ul{list-style:none;font-size:13px;color:#8899aa;line-height:2;}
+h1{font-family:'Cinzel',serif;color:var(--gold);font-size:32px;margin-bottom:8px;text-shadow:0 2px 10px rgba(0,0,0,.5);}
+.subtitle{color:var(--text-gray);font-size:14px;margin-bottom:30px;}
+.download-card{background:linear-gradient(135deg,#2a2018 0%,#1a1410 100%);border:2px solid #4a3a25;border-radius:16px;padding:32px;margin-bottom:20px;text-align:center;}
+.download-card .icon{font-size:64px;margin-bottom:16px;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));}
+.download-card h2{font-family:'Cinzel',serif;color:var(--gold);font-size:24px;margin-bottom:8px;}
+.download-card p{color:var(--text-gray);font-size:14px;margin-bottom:20px;}
+.download-card .size{color:var(--green-light);font-size:13px;margin-bottom:16px;}
+.btn-primary{display:inline-block;padding:14px 32px;background:linear-gradient(180deg,var(--gold-dark) 0%,#8a6820 100%);color:#1a1410;text-decoration:none;border-radius:8px;font-weight:bold;font-size:18px;border:2px solid var(--gold);}
+.btn-primary:hover{background:linear-gradient(180deg,var(--gold) 0%,var(--gold-dark) 100%);}
+.btn-secondary{display:inline-block;padding:12px 24px;background:transparent;color:var(--gold);text-decoration:none;border:1px solid var(--gold-dark);border-radius:6px;font-size:15px;margin-top:10px;}
+.btn-secondary:hover{border-color:var(--gold);background:rgba(212,168,75,.1);}
+.file-list{text-align:left;margin-top:20px;padding:16px;background:var(--bg-dark);border-radius:8px;border:1px solid var(--panel-border);}
+.file-list h3{color:var(--gold);font-size:14px;margin-bottom:10px;}
+.file-list ul{list-style:none;font-size:13px;color:var(--text-gray);line-height:2;}
 .file-list li::before{content:"📄 ";}
-.install-card{background:#1a2a3a;border-radius:12px;padding:24px;margin-bottom:20px;border:1px solid #2d4a6a;}
-.install-card h2{color:#4fc3f7;font-size:20px;margin-bottom:12px;}
-.install-card ol{margin-left:20px;color:#c0c8d0;font-size:14px;line-height:2;}
-.install-card .platform{display:inline-block;padding:4px 10px;background:#0f1923;border-radius:4px;font-size:12px;color:#8899aa;margin-right:6px;}
+.install-card{background:linear-gradient(135deg,#2a2018 0%,#1a1410 100%);border:2px solid #4a3a25;border-radius:12px;padding:24px;margin-bottom:20px;}
+.install-card h2{font-family:'Cinzel',serif;color:var(--gold);font-size:20px;margin-bottom:12px;}
+.install-card ol{margin-left:20px;color:var(--text-white);font-size:14px;line-height:2;}
+.install-card .platform{display:inline-block;padding:4px 10px;background:var(--bg-dark);border-radius:4px;font-size:12px;color:var(--text-gray);margin-right:6px;border:1px solid var(--panel-border);}
 </style></head>
 <body>
 <div class="nav-bar"><div class="container">
@@ -630,60 +616,54 @@ INDEX_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#1a2a3a">
+<meta name="theme-color" content="#1a1410">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="STS2决策器">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 <link rel="icon" type="image/png" href="/static/icon-192.png">
+<link rel="stylesheet" href="/static/game-theme.css">
 <title>STS2 决策器 - 静默猎手AI教练</title>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:-apple-system,'Segoe UI',sans-serif; background:#0f1923; color:#e0e6ed; min-height:100vh; }
-.header { background:linear-gradient(135deg,#1a2a3a,#0f1923); padding:20px; border-bottom:2px solid #2d4a6a; }
-.header .container { display:flex; justify-content:space-between; align-items:center; max-width:900px; margin:0 auto; }
-.header h1 { font-size:24px; color:#4fc3f7; }
-.header p { color:#8899aa; margin-top:4px; font-size:14px; }
+/* 首页专属样式 */
+.hero { text-align:center; padding:50px 20px 30px; }
+.hero h1 { font-family:'Cinzel',serif; font-size:42px; color:var(--gold); text-shadow:0 2px 20px rgba(0,0,0,.7),0 0 40px rgba(212,168,75,.3); margin-bottom:12px; }
+.hero p { color:var(--text-gray); font-size:16px; max-width:600px; margin:0 auto; }
+.hero .subtitle { color:var(--gold-dark); font-size:14px; margin-top:8px; letter-spacing:2px; }
+.card-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:20px; max-width:1200px; margin:30px auto; padding:0 20px; }
+.feature-card { background:linear-gradient(135deg,#2a2018 0%,#1a1410 100%); border:2px solid #4a3a25; border-radius:12px; padding:28px 24px; cursor:pointer; transition:all .3s; text-decoration:none; color:inherit; display:block; position:relative; overflow:hidden; }
+.feature-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; background:linear-gradient(90deg,transparent,var(--gold),transparent); opacity:0; transition:opacity .3s; }
+.feature-card:hover { border-color:var(--gold); transform:translateY(-4px); box-shadow:0 8px 30px rgba(212,168,75,.2); }
+.feature-card:hover::before { opacity:1; }
+.feature-card .icon { font-size:40px; margin-bottom:16px; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+.feature-card h3 { font-family:'Cinzel',serif; color:var(--gold); font-size:20px; margin-bottom:10px; }
+.feature-card p { color:var(--text-gray); font-size:14px; line-height:1.7; }
+.feature-card .status { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; margin-top:14px; font-weight:700; }
+.feature-card .status.online { background:rgba(90,154,90,.2); color:var(--green-light); border:1px solid var(--green); }
+.feature-card .status.offline { background:rgba(201,74,74,.2); color:var(--red-light); border:1px solid var(--red); }
 .user-menu { display:flex; align-items:center; gap:12px; }
-.user-menu a { color:#4fc3f7; text-decoration:none; font-size:14px; padding:6px 12px; border:1px solid #4fc3f7; border-radius:6px; }
-.user-menu .username { color:#66bb6a; font-size:14px; }
-.container { max-width:900px; margin:0 auto; padding:20px; }
-.card-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; margin-top:20px; }
-.card { background:#1a2a3a; border-radius:12px; padding:24px; border:1px solid #2d4a6a; cursor:pointer; transition:all .2s; text-decoration:none; color:inherit; display:block; }
-.card:hover { border-color:#4fc3f7; transform:translateY(-2px); box-shadow:0 8px 24px rgba(79,195,247,.15); }
-.card h3 { color:#4fc3f7; font-size:18px; margin-bottom:8px; }
-.card p { color:#8899aa; font-size:14px; line-height:1.6; }
-.card .icon { font-size:32px; margin-bottom:12px; }
-.status { display:inline-block; padding:4px 12px; border-radius:20px; font-size:12px; margin-top:12px; }
-.status.online { background:#1b5e20; color:#66bb6a; }
-.status.offline { background:#b71c1c; color:#ef5350; }
-.footer { text-align:center; padding:20px; color:#556677; font-size:12px; margin-top:40px; }
-/* 导航栏 */
-.nav-bar { background:#1a2a3a; border-bottom:1px solid #2d4a6a; padding:0; position:sticky; top:0; z-index:100; }
-.nav-bar .container { display:flex; align-items:center; gap:8px; max-width:900px; margin:0 auto; padding:8px 20px; overflow-x:auto; }
-.nav-bar a { color:#8899aa; text-decoration:none; font-size:13px; padding:8px 12px; border-radius:6px; white-space:nowrap; transition:all .2s; }
-.nav-bar a:hover { color:#4fc3f7; background:#0f1923; }
-.nav-bar a.active { color:#4fc3f7; background:#0f1923; }
-.nav-bar .nav-brand { color:#4fc3f7; font-weight:bold; font-size:15px; margin-right:8px; }
+.user-menu a { color:var(--gold); text-decoration:none; font-size:14px; padding:6px 14px; border:1px solid var(--gold-dark); border-radius:4px; transition:all .2s; }
+.user-menu a:hover { background:rgba(212,168,75,.1); border-color:var(--gold); }
+.user-menu .username { color:var(--green-light); font-size:14px; }
 /* 首次访问弹窗 */
-.welcome-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+.welcome-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:1000; align-items:center; justify-content:center; padding:20px; }
 .welcome-modal.show { display:flex; }
-.welcome-box { background:#1a2a3a; border-radius:16px; padding:32px; max-width:480px; width:100%; border:2px solid #4fc3f7; box-shadow:0 20px 60px rgba(0,0,0,.5); }
-.welcome-box h2 { color:#4fc3f7; font-size:22px; margin-bottom:16px; }
-.welcome-box .step { display:flex; gap:12px; margin-bottom:16px; align-items:flex-start; }
-.welcome-box .step-num { background:#4fc3f7; color:#0f1923; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px; flex-shrink:0; }
-.welcome-box .step-text { color:#c0c8d0; font-size:14px; line-height:1.6; }
-.welcome-box .step-text strong { color:#e0e6ed; }
-.welcome-box .close-btn { width:100%; padding:12px; background:#4fc3f7; color:#0f1923; border:none; border-radius:8px; font-size:16px; font-weight:bold; cursor:pointer; margin-top:8px; }
-.welcome-box .close-btn:hover { background:#81d4fa; }
-.welcome-box .skip-link { display:block; text-align:center; color:#556677; font-size:12px; margin-top:12px; cursor:pointer; text-decoration:underline; }
+.welcome-box { background:linear-gradient(135deg,#2a2018 0%,#1a1410 100%); border:3px solid var(--gold-dark); border-radius:12px; padding:36px; max-width:520px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,.7),0 0 40px rgba(212,168,75,.15); }
+.welcome-box h2 { font-family:'Cinzel',serif; color:var(--gold); font-size:26px; margin-bottom:20px; text-align:center; }
+.step-item { display:flex; gap:16px; margin-bottom:18px; align-items:flex-start; }
+.step-num { background:linear-gradient(135deg,var(--gold) 0%,var(--gold-dark) 100%); color:var(--bg-dark); width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px; flex-shrink:0; }
+.step-text { color:var(--text-white); font-size:14px; line-height:1.7; }
+.step-text strong { color:var(--gold-light); }
+.welcome-box .close-btn { width:100%; padding:14px; background:linear-gradient(180deg,var(--gold-dark) 0%,#8a6820 100%); color:#1a1410; border:2px solid var(--gold); border-radius:6px; font-size:16px; font-weight:700; cursor:pointer; margin-top:10px; font-family:'Kreon',serif; }
+.welcome-box .close-btn:hover { background:linear-gradient(180deg,var(--gold) 0%,var(--gold-dark) 100%); }
+.welcome-box .skip-link { display:block; text-align:center; color:var(--text-dim); font-size:12px; margin-top:14px; cursor:pointer; text-decoration:underline; }
 </style>
 </head>
 <body>
 <!-- 导航栏 -->
 <div class="nav-bar"><div class="container">
-  <a href="/" class="nav-brand">STS2决策器</a>
+  <a href="/" class="nav-brand">⚔️ STS2决策器</a>
   <a href="/live">当前对局</a>
   <a href="/history">历史对局</a>
   <a href="/monsters">怪物图鉴</a>
@@ -692,33 +672,39 @@ body { font-family:-apple-system,'Segoe UI',sans-serif; background:#0f1923; colo
   <a href="/guide">使用指南</a>
   <a href="/download">下载</a>
 </div></div>
-<div class="header"><div class="container">
-  <div><h1>STS2 决策器</h1><p>杀戮尖塔2 · 静默猎手AI教练 · 实时决策 + 战略复盘</p></div>
-  <div class="user-menu" id="userMenu"><a href="/login">登录</a><a href="/register">注册</a></div>
-</div></div>
-<div class="container">
-  <div class="card-grid">
-    <a class="card" href="/live"><div class="icon">⚔️</div><h3>当前对局</h3><p>实时战斗决策推荐、怪物行为显示、牌序记忆、路线/奖励/商店指导</p><span class="status" id="liveStatus">检测中...</span></a>
-    <a class="card" href="/history"><div class="icon">📊</div><h3>历史对局</h3><p>查看所有对局记录，筛选进阶、角色、结果，追踪你的进步</p></a>
-    <a class="card" href="/monsters"><div class="icon">👹</div><h3>怪物图鉴</h3><p>所有怪物的固定行为模式、伤害数值、应对策略</p></a>
-    <a class="card" href="/cards"><div class="icon">🃏</div><h3>卡牌图鉴</h3><p>静默猎手全卡牌效果、升级对比、流派搭配推荐</p></a>
-    <a class="card" href="/relics"><div class="icon">🏺</div><h3>遗物图鉴</h3><p>全遗物效果、稀有度、流派适配，含静默猎手专属和共享遗物</p></a>
-    <a class="card" href="/guide"><div class="icon">📖</div><h3>使用指南</h3><p>三步上手：安装mod → 运行Agent → 打开网页，开始AI辅助</p></a>
-    <a class="card" href="/download"><div class="icon">📥</div><h3>下载本地端</h3><p>下载本地Agent程序和使用指南，一键启动游戏自动决策</p></a>
-  </div>
+
+<!-- 主标题 -->
+<div class="hero">
+  <h1>STS2 决策器</h1>
+  <p>杀戮尖塔2 · 静默猎手AI教练</p>
+  <p class="subtitle">实时决策 · 战略复盘 · 图鉴查询</p>
+  <div class="user-menu" id="userMenu" style="margin-top:20px;justify-content:center;"><a href="/login">登录</a><a href="/register">注册</a></div>
 </div>
+
+<!-- 功能卡片 -->
+<div class="card-grid">
+  <a class="feature-card" href="/live"><div class="icon">⚔️</div><h3>当前对局</h3><p>实时战斗决策推荐、怪物行为显示、牌序记忆、路线/奖励/商店指导</p><span class="status" id="liveStatus">检测中...</span></a>
+  <a class="feature-card" href="/history"><div class="icon">📊</div><h3>历史对局</h3><p>查看所有对局记录，筛选进阶、角色、结果，追踪你的进步</p></a>
+  <a class="feature-card" href="/monsters"><div class="icon">👹</div><h3>怪物图鉴</h3><p>所有怪物的固定行为模式、伤害数值、应对策略</p></a>
+  <a class="feature-card" href="/cards"><div class="icon">🃏</div><h3>卡牌图鉴</h3><p>静默猎手全卡牌效果、升级对比、流派搭配推荐</p></a>
+  <a class="feature-card" href="/relics"><div class="icon">🏺</div><h3>遗物图鉴</h3><p>全遗物效果、稀有度、流派适配，含静默猎手专属和共享遗物</p></a>
+  <a class="feature-card" href="/guide"><div class="icon">📖</div><h3>使用指南</h3><p>三步上手：安装mod → 运行Agent → 打开网页，开始AI辅助</p></a>
+  <a class="feature-card" href="/download"><div class="icon">📥</div><h3>下载本地端</h3><p>下载本地Agent程序和使用指南，一键启动游戏自动决策</p></a>
+</div>
+
 <!-- 首次访问弹窗 -->
 <div class="welcome-modal" id="welcomeModal">
   <div class="welcome-box">
     <h2>👋 欢迎使用 STS2 决策器</h2>
-    <div class="step"><div class="step-num">1</div><div class="step-text"><strong>安装游戏mod</strong><br>下载并安装 STS2 AI Agent mod，让决策器能读取游戏状态</div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text"><strong>运行本地Agent</strong><br>下载本地端压缩包，运行启动脚本，自动连接游戏</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text"><strong>打开网页决策</strong><br>在本网站查看实时推荐、怪物行为、牌序记忆和战略复盘</div></div>
+    <div class="step-item"><div class="step-num">1</div><div class="step-text"><strong>安装游戏mod</strong><br>下载并安装 STS2 AI Agent mod，让决策器能读取游戏状态</div></div>
+    <div class="step-item"><div class="step-num">2</div><div class="step-text"><strong>运行本地Agent</strong><br>下载本地端压缩包，运行启动脚本，自动连接游戏</div></div>
+    <div class="step-item"><div class="step-num">3</div><div class="step-text"><strong>打开网页决策</strong><br>在本网站查看实时推荐、怪物行为、牌序记忆和战略复盘</div></div>
     <button class="close-btn" onclick="closeWelcome()">我知道了，开始使用</button>
     <span class="skip-link" onclick="closeWelcome()">不再显示</span>
   </div>
 </div>
-<div class="footer">STS2 Advisor v8.0 · 基于MCTS+评估器 · 数据来自STS2 AI Agent mod</div>
+
+<div class="footer">STS2 Advisor v11.0 · 基于MCTS+评估器 · 数据来自STS2 AI Agent mod · 游戏风格UI</div>
 <script>
 fetch('/api/auth/me').then(r=>r.json()).then(d=>{
   const menu=document.getElementById('userMenu');
@@ -730,18 +716,9 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
   if(d.connected){el.textContent='游戏已连接';el.className='status online';}
   else{el.textContent='游戏未连接';el.className='status offline';}
 });
-// PWA Service Worker 注册
-if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
-}
-// 首次访问弹窗
-function closeWelcome(){
-  document.getElementById('welcomeModal').classList.remove('show');
-  localStorage.setItem('sts2_welcome_shown','1');
-}
-if(!localStorage.getItem('sts2_welcome_shown')){
-  setTimeout(()=>document.getElementById('welcomeModal').classList.add('show'),500);
-}
+if('serviceWorker' in navigator){navigator.serviceWorker.register('/service-worker.js').catch(()=>{});}
+function closeWelcome(){document.getElementById('welcomeModal').classList.remove('show');localStorage.setItem('sts2_welcome_shown','1');}
+if(!localStorage.getItem('sts2_welcome_shown')){setTimeout(()=>document.getElementById('welcomeModal').classList.add('show'),500);}
 </script>
 </body>
 </html>"""
