@@ -268,20 +268,17 @@ def api_monster_detail(monster_id):
 
 @app.route("/api/cards")
 def api_cards():
-    from advisor.cards import CARD_EFFECTS
-    return jsonify({"cards": {k: v for k, v in CARD_EFFECTS.items()}})
+    from advisor.cards_db import SILENT_CARDS, CARD_STATS
+    return jsonify({"cards": SILENT_CARDS, "stats": CARD_STATS})
 
 
 @app.route("/api/cards/<card_name>")
 def api_card_detail(card_name):
     """卡牌详情API"""
-    from advisor.cards import CARD_EFFECTS
-    if card_name in CARD_EFFECTS:
-        return jsonify({"card": {"name": card_name, **CARD_EFFECTS[card_name]}})
-    # 模糊搜索
-    for name, effect in CARD_EFFECTS.items():
-        if card_name.lower() in name.lower():
-            return jsonify({"card": {"name": name, **effect}})
+    from advisor.cards_db import get_card_by_name
+    c = get_card_by_name(card_name)
+    if c:
+        return jsonify({"card": c})
     return jsonify({"error": "卡牌未找到"}), 404
 
 
@@ -626,24 +623,34 @@ MONSTERS_HTML = """<!DOCTYPE html>
 body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
 .topbar{background:#1a2a3a;padding:12px 20px;border-bottom:1px solid #2d4a6a;}
 .topbar a{color:#4fc3f7;text-decoration:none;}
-.container{max-width:900px;margin:0 auto;padding:16px;}
+.container{max-width:1000px;margin:0 auto;padding:16px;}
+.stats-bar{display:flex;gap:16px;margin-bottom:16px;flex-wrap:wrap;}
+.stat-item{background:#1a2a3a;padding:8px 16px;border-radius:8px;border:1px solid #2d4a6a;}
+.stat-item .num{font-size:20px;font-weight:bold;color:#4fc3f7;}
+.stat-item .label{font-size:11px;color:#8899aa;}
 .filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
 .filter-btn{padding:6px 14px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:20px;color:#8899aa;cursor:pointer;font-size:13px;}
 .filter-btn.active{background:#4fc3f7;color:#000;border-color:#4fc3f7;}
-.monster{background:#1a2a3a;border-radius:10px;padding:14px 16px;margin-bottom:10px;border:1px solid #2d4a6a;cursor:pointer;transition:all .2s;}
-.monster:hover{border-color:#4fc3f7;background:#1f3347;transform:translateX(4px);}
-.monster h3{color:#ef9a9a;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
-.monster .type-tag{font-size:11px;padding:2px 8px;border-radius:10px;background:#2d4a6a;color:#8899aa;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.monster{background:#1a2a3a;border-radius:10px;padding:12px;border:1px solid #2d4a6a;cursor:pointer;transition:all .2s;text-align:center;}
+.monster:hover{border-color:#4fc3f7;background:#1f3347;transform:translateY(-3px);box-shadow:0 4px 12px rgba(79,195,247,.2);}
+.monster-img{width:80px;height:80px;object-fit:contain;margin:0 auto 8px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+.monster-img-fallback{width:80px;height:80px;margin:0 auto 8px;background:#2d4a6a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;}
+.monster h3{color:#ef9a9a;margin-bottom:4px;font-size:15px;}
+.monster .type-tag{font-size:10px;padding:2px 8px;border-radius:10px;background:#2d4a6a;color:#8899aa;display:inline-block;margin-bottom:6px;}
 .monster .type-tag.boss{background:#8b0000;color:#ffaaaa;}
 .monster .type-tag.elite{background:#8b6914;color:#ffd700;}
-.monster .hp{color:#8899aa;font-size:13px;margin-bottom:6px;}
-.monster .tip{color:#a0d0a0;font-size:12px;font-style:italic;}
-.monster .moves-preview{font-size:12px;color:#667788;margin-top:4px;}
+.monster .hp{color:#8899aa;font-size:12px;}
+.monster .act-tag{font-size:10px;color:#667788;margin-top:4px;}
 /* 详情弹窗 */
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:100;justify-content:center;align-items:center;padding:20px;}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:100;justify-content:center;align-items:center;padding:20px;}
 .modal-overlay.show{display:flex;}
-.modal{background:#1a2a3a;border-radius:12px;padding:24px;max-width:500px;width:100%;max-height:85vh;overflow-y:auto;border:2px solid #4fc3f7;}
-.modal h2{color:#ef9a9a;margin-bottom:12px;}
+.modal{background:#1a2a3a;border-radius:12px;padding:24px;max-width:550px;width:100%;max-height:85vh;overflow-y:auto;border:2px solid #4fc3f7;}
+.modal-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.modal-img{width:100px;height:100px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));}
+.modal-img-fallback{width:100px;height:100px;background:#2d4a6a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:40px;}
+.modal-title h2{color:#ef9a9a;margin-bottom:4px;}
+.modal-title .meta{color:#8899aa;font-size:13px;}
 .modal .close-btn{float:right;background:none;border:none;color:#8899aa;font-size:24px;cursor:pointer;}
 .modal .detail-row{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #2d4a6a;}
 .modal .detail-label{color:#8899aa;font-size:12px;margin-bottom:4px;}
@@ -653,11 +660,12 @@ body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
 .modal .move-desc{color:#aaa;font-size:13px;margin-top:2px;}
 .modal .tip-box{background:rgba(76,175,80,.1);border-left:3px solid #4caf50;padding:10px;margin-top:12px;border-radius:4px;}
 .modal .tip-box .label{color:#4caf50;font-size:12px;font-weight:bold;margin-bottom:4px;}
-.empty{text-align:center;padding:60px;color:#556677;}
+.empty{text-align:center;padding:60px;color:#556677;grid-column:1/-1;}
 </style></head>
 <body>
 <div class="topbar"><a href="/">← 返回首页</a> | 怪物图鉴</div>
 <div class="container">
+  <div class="stats-bar" id="stats"></div>
   <div class="filters" id="filters">
     <button class="filter-btn active" data-act="all">全部</button>
     <button class="filter-btn" data-act="密林">密林</button>
@@ -665,7 +673,7 @@ body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
     <button class="filter-btn" data-act="荣耀">荣耀</button>
     <button class="filter-btn" data-act="暗港">暗港</button>
   </div>
-  <div id="list"><div class="empty">加载中...</div></div>
+  <div class="grid" id="grid"><div class="empty">加载中...</div></div>
 </div>
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
@@ -678,8 +686,16 @@ let allMonsters=[];
 let currentFilter='all';
 fetch('/api/monsters').then(r=>r.json()).then(d=>{
   allMonsters=d.monsters||[];
+  renderStats();
   renderMonsters();
 });
+function renderStats(){
+  const acts={};
+  allMonsters.forEach(m=>{acts[m.act]=(acts[m.act]||0)+1;});
+  document.getElementById('stats').innerHTML=
+    '<div class="stat-item"><div class="num">'+allMonsters.length+'</div><div class="label">怪物总数</div></div>'+
+    Object.entries(acts).map(([a,n])=>'<div class="stat-item"><div class="num">'+n+'</div><div class="label">'+a+'</div></div>').join('');
+}
 document.getElementById('filters').addEventListener('click',e=>{
   if(e.target.classList.contains('filter-btn')){
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -688,23 +704,29 @@ document.getElementById('filters').addEventListener('click',e=>{
     renderMonsters();
   }
 });
+function monsterImg(m){
+  if(m.image_url)return '<img class="monster-img" src="'+m.image_url+'" alt="'+m.name+'" onerror="this.parentElement.innerHTML=\\'<div class=\\\'monster-img-fallback\\\'>👾</div>\\'">';
+  return '<div class="monster-img-fallback">👾</div>';
+}
 function renderMonsters(){
   const list=currentFilter==='all'?allMonsters:allMonsters.filter(m=>m.act===currentFilter);
-  const el=document.getElementById('list');
+  const el=document.getElementById('grid');
   if(!list.length){el.innerHTML='<div class="empty">暂无怪物数据</div>';return;}
   el.innerHTML=list.map(m=>'<div class="monster" onclick="showDetail(\\''+(m.id||m.name)+'\\')">'+
-    '<h3>'+m.name+'<span class="type-tag '+m.type+'">'+m.type+'</span></h3>'+
-    '<div class="hp">HP: '+m.hp_min+'-'+m.hp_max+(m.hp_asc_min?' (进阶'+m.hp_asc_min+'-'+m.hp_asc_max+')':'')+' | '+m.act+'</div>'+
-    '<div class="moves-preview">招式: '+(m.moves||[]).map(mv=>mv.name.replace('!','')).join(' / ')+'</div>'+
-    (m.tip?'<div class="tip">💡 '+m.tip+'</div>':'')+
+    monsterImg(m)+
+    '<h3>'+m.name+'</h3>'+
+    '<span class="type-tag '+m.type.toLowerCase()+'">'+m.type+'</span>'+
+    '<div class="hp">HP: '+m.hp_min+'-'+m.hp_max+'</div>'+
+    '<div class="act-tag">'+m.act+'</div>'+
   '</div>').join('');
 }
 function showDetail(id){
   const m=allMonsters.find(x=>(x.id||x.name)===id);
   if(!m)return;
+  const img=m.image_url?'<img class="modal-img" src="'+m.image_url+'" alt="'+m.name+'" onerror="this.outerHTML=\\'<div class=\\\'modal-img-fallback\\\'>👾</div>\\'">':'<div class="modal-img-fallback">👾</div>';
   const c=document.getElementById('modal-content');
-  c.innerHTML='<h2>'+m.name+'</h2>'+
-    '<div class="detail-row"><div class="detail-label">章节 / 类型</div><div class="detail-value">'+m.act+' · '+m.type+'</div></div>'+
+  c.innerHTML='<div class="modal-header">'+img+
+    '<div class="modal-title"><h2>'+m.name+'</h2><div class="meta">'+m.act+' · '+m.type+'</div></div></div>'+
     '<div class="detail-row"><div class="detail-label">血量</div><div class="detail-value">'+m.hp_min+'-'+m.hp_max+(m.hp_asc_min?' (进阶: '+m.hp_asc_min+'-'+m.hp_asc_max+')':'')+'</div></div>'+
     (m.abilities&&m.abilities.length?'<div class="detail-row"><div class="detail-label">初始能力</div><div class="detail-value">'+m.abilities.join(', ')+'</div></div>':'')+
     '<div class="detail-row"><div class="detail-label">招式列表 ('+(m.moves||[]).length+')</div>'+
@@ -726,128 +748,141 @@ CARDS_HTML = """<!DOCTYPE html>
 body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
 .topbar{background:#1a2a3a;padding:12px 20px;border-bottom:1px solid #2d4a6a;}
 .topbar a{color:#4fc3f7;text-decoration:none;}
-.container{max-width:1000px;margin:0 auto;padding:16px;}
-.search-box{margin-bottom:16px;}
+.container{max-width:1200px;margin:0 auto;padding:16px;}
+.stats-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.stat-item{background:#1a2a3a;padding:8px 14px;border-radius:8px;border:1px solid #2d4a6a;}
+.stat-item .num{font-size:18px;font-weight:bold;color:#4fc3f7;}
+.stat-item .label{font-size:11px;color:#8899aa;}
+.search-box{margin-bottom:12px;}
 .search-box input{width:100%;padding:10px 16px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:8px;color:#e0e6ed;font-size:14px;}
 .search-box input:focus{outline:none;border-color:#4fc3f7;}
 .filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
 .filter-btn{padding:6px 14px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:20px;color:#8899aa;cursor:pointer;font-size:13px;}
 .filter-btn.active{background:#4fc3f7;color:#000;border-color:#4fc3f7;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;}
-.card{background:#1a2a3a;border-radius:8px;padding:12px;border:1px solid #2d4a6a;font-size:13px;cursor:pointer;transition:all .2s;}
-.card:hover{border-color:#4fc3f7;background:#1f3347;transform:translateY(-2px);}
-.card .name{color:#4fc3f7;font-weight:bold;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
-.card .cost{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;background:#4fc3f7;border-radius:50%;font-size:12px;color:#000;font-weight:bold;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+.card{background:#1a2a3a;border-radius:10px;padding:10px;border:1px solid #2d4a6a;cursor:pointer;transition:all .2s;}
+.card:hover{border-color:#4fc3f7;background:#1f3347;transform:translateY(-3px);box-shadow:0 4px 12px rgba(79,195,247,.2);}
+.card-img{width:100%;border-radius:6px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.4);}
+.card-img-fallback{width:100%;height:120px;background:linear-gradient(135deg,#2d4a6a,#1a2a3a);border-radius:6px;margin-bottom:8px;display:flex;align-items:center;justify-content:center;font-size:36px;}
+.card .name{color:#4fc3f7;font-weight:bold;margin-bottom:4px;font-size:14px;display:flex;align-items:center;gap:6px;}
+.card .cost{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;background:#4fc3f7;border-radius:50%;font-size:12px;color:#000;font-weight:bold;flex-shrink:0;}
 .card .rarity{font-size:10px;padding:1px 6px;border-radius:8px;margin-left:auto;}
-.card .rarity.common{background:#666;color:#fff;}
-.card .rarity.uncommon{background:#4a7c4a;color:#fff;}
-.card .rarity.rare{background:#b8860b;color:#fff;}
-.card .effect{color:#aaa;font-size:12px;line-height:1.5;}
-.card .tags{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;}
-.card .tag{font-size:10px;padding:1px 6px;background:#2d4a6a;border-radius:8px;color:#8899aa;}
+.card .rarity.基础{background:#666;color:#fff;}
+.card .rarity.普通{background:#555;color:#fff;}
+.card .rarity.罕见{background:#4a7c4a;color:#fff;}
+.card .rarity.稀有{background:#b8860b;color:#fff;}
+.card .rarity.先古{background:#8b008b;color:#fff;}
+.card .type{font-size:11px;color:#8899aa;margin-bottom:4px;}
+.card .effect{color:#aaa;font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 /* 详情弹窗 */
-.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:100;justify-content:center;align-items:center;padding:20px;}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:100;justify-content:center;align-items:center;padding:20px;}
 .modal-overlay.show{display:flex;}
-.modal{background:#1a2a3a;border-radius:12px;padding:24px;max-width:500px;width:100%;max-height:85vh;overflow-y:auto;border:2px solid #4fc3f7;}
-.modal h2{color:#4fc3f7;margin-bottom:12px;display:flex;align-items:center;gap:10px;}
-.modal .close-btn{float:right;background:none;border:none;color:#8899aa;font-size:24px;cursor:pointer;}
-.modal .detail-row{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #2d4a6a;}
+.modal{background:#1a2a3a;border-radius:12px;padding:24px;max-width:600px;width:100%;max-height:85vh;overflow-y:auto;border:2px solid #4fc3f7;}
+.modal-header{display:flex;gap:16px;margin-bottom:16px;}
+.modal-card-img{width:180px;flex-shrink:0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.5);}
+.modal-card-img-fallback{width:180px;height:250px;background:linear-gradient(135deg,#2d4a6a,#1a2a3a);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:60px;flex-shrink:0;}
+.modal-info{flex:1;}
+.modal h2{color:#4fc3f7;margin-bottom:8px;font-size:20px;}
+.modal .close-btn{position:absolute;top:16px;right:16px;background:none;border:none;color:#8899aa;font-size:24px;cursor:pointer;z-index:10;}
+.modal .detail-row{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #2d4a6a;}
 .modal .detail-label{color:#8899aa;font-size:12px;margin-bottom:4px;}
 .modal .detail-value{color:#e0e6ed;font-size:14px;line-height:1.6;}
 .modal .synergy-box{background:rgba(76,175,80,.1);border-left:3px solid #4caf50;padding:10px;margin-top:12px;border-radius:4px;}
 .modal .synergy-box .label{color:#4caf50;font-size:12px;font-weight:bold;margin-bottom:4px;}
-.empty{text-align:center;padding:60px;color:#556677;}
+.modal .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.modal .tag{font-size:11px;padding:2px 8px;background:#2d4a6a;border-radius:10px;color:#8899aa;}
+.empty{text-align:center;padding:60px;color:#556677;grid-column:1/-1;}
 </style></head>
 <body>
 <div class="topbar"><a href="/">← 返回首页</a> | 卡牌图鉴（静默猎手）</div>
 <div class="container">
-  <div class="search-box"><input type="text" id="search" placeholder="搜索卡牌名称或效果..." oninput="renderCards()"></div>
+  <div class="stats-bar" id="stats"></div>
+  <div class="search-box"><input type="text" id="search" placeholder="搜索卡牌名称、效果或标签..." oninput="renderCards()"></div>
   <div class="filters" id="filters">
-    <button class="filter-btn active" data-rarity="all">全部</button>
-    <button class="filter-btn" data-rarity="common">普通</button>
-    <button class="filter-btn" data-rarity="uncommon">罕见</button>
-    <button class="filter-btn" data-rarity="rare">稀有</button>
-    <button class="filter-btn" data-type="attack">攻击</button>
-    <button class="filter-btn" data-type="skill">技能</button>
-    <button class="filter-btn" data-type="power">能力</button>
+    <button class="filter-btn active" data-filter="all">全部</button>
+    <button class="filter-btn" data-filter="基础">基础</button>
+    <button class="filter-btn" data-filter="普通">普通</button>
+    <button class="filter-btn" data-filter="罕见">罕见</button>
+    <button class="filter-btn" data-filter="稀有">稀有</button>
+    <button class="filter-btn" data-filter="先古">先古</button>
+    <button class="filter-btn" data-filter="攻击">攻击</button>
+    <button class="filter-btn" data-filter="技能">技能</button>
+    <button class="filter-btn" data-filter="能力">能力</button>
   </div>
   <div class="grid" id="grid"></div>
 </div>
 <div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal">
+  <div class="modal" style="position:relative;">
     <button class="close-btn" onclick="closeModal()">×</button>
     <div id="modal-content"></div>
   </div>
 </div>
 <script>
 let allCards=[];
-let currentRarity='all';
-let currentType='all';
+let currentFilter='all';
 fetch('/api/cards').then(r=>r.json()).then(d=>{
-  allCards=Object.entries(d.cards).map(([name,e])=>({name,...e}));
+  allCards=d.cards||[];
+  renderStats();
   renderCards();
 });
+function renderStats(){
+  const s={};
+  allCards.forEach(c=>{s[c.rarity]=(s[c.rarity]||0)+1;});
+  document.getElementById('stats').innerHTML=
+    '<div class="stat-item"><div class="num">'+allCards.length+'</div><div class="label">卡牌总数</div></div>'+
+    Object.entries(s).map(([r,n])=>'<div class="stat-item"><div class="num">'+n+'</div><div class="label">'+r+'</div></div>').join('');
+}
 document.getElementById('filters').addEventListener('click',e=>{
   if(e.target.classList.contains('filter-btn')){
-    const type=e.target.dataset.rarity||e.target.dataset.type;
-    if(e.target.dataset.rarity){currentRarity=type;currentType='all';}
-    else{currentType=type;currentRarity='all';}
     document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
     e.target.classList.add('active');
+    currentFilter=e.target.dataset.filter;
     renderCards();
   }
 });
+function cardImg(c,cls){
+  if(c.image_url)return '<img class="'+cls+'" src="'+c.image_url+'" alt="'+c.name_cn+'" onerror="this.outerHTML=\\'<div class=\\''+cls+'-fallback\\'>🃏</div>\\'">';
+  return '<div class="'+cls+'-fallback">🃏</div>';
+}
 function renderCards(){
   const q=document.getElementById('search').value.toLowerCase();
   let list=allCards;
-  if(currentRarity!=='all')list=list.filter(c=>(c.rarity||'common')===currentRarity);
-  if(currentType!=='all')list=list.filter(c=>(c.type||'')===currentType);
-  if(q)list=list.filter(c=>c.name.toLowerCase().includes(q)||JSON.stringify(c).toLowerCase().includes(q));
+  if(currentFilter!=='all'){
+    list=list.filter(c=>c.rarity===currentFilter||c.type===currentFilter);
+  }
+  if(q){
+    list=list.filter(c=>
+      c.name_cn.toLowerCase().includes(q)||
+      c.name_en.toLowerCase().includes(q)||
+      c.effect.toLowerCase().includes(q)||
+      (c.tags||[]).some(t=>t.toLowerCase().includes(q))
+    );
+  }
   const el=document.getElementById('grid');
   if(!list.length){el.innerHTML='<div class="empty">未找到卡牌</div>';return;}
-  el.innerHTML=list.map(c=>{
-    const eff=[];
-    if(c.attack)eff.push('攻击'+c.attack+(c.hits>1?'×'+c.hits:''));
-    if(c.block)eff.push('格挡'+c.block);
-    if(c.poison)eff.push('毒'+c.poison);
-    if(c.draw)eff.push('抽'+c.draw);
-    if(c.weak)eff.push('虚弱'+c.weak);
-    if(c.vulnerable)eff.push('易伤'+c.vulnerable);
-    return '<div class="card" onclick="showDetail(\\''+c.name.replace(/'/g,"\\\\'")+'\\')">'+
-      '<div class="name"><span class="cost">'+(c.cost??'?')+'</span>'+c.name+
-      '<span class="rarity '+(c.rarity||'common')+'">'+(c.rarity||'普通')+'</span></div>'+
-      '<div class="effect">'+eff.join(' ')+(c.description?' · '+c.description:'')+'</div>'+
-    '</div>';
-  }).join('');
+  el.innerHTML=list.map(c=>'<div class="card" onclick="showDetail(\\''+c.id+'\\')">'+
+    cardImg(c,'card-img')+
+    '<div class="name"><span class="cost">'+c.cost+'</span>'+c.name_cn+
+    '<span class="rarity '+c.rarity+'">'+c.rarity+'</span></div>'+
+    '<div class="type">'+c.type+'</div>'+
+    '<div class="effect">'+c.effect+'</div>'+
+  '</div>').join('');
 }
-function showDetail(name){
-  const c=allCards.find(x=>x.name===name);
+function showDetail(id){
+  const c=allCards.find(x=>x.id===id);
   if(!c)return;
-  const eff=[];
-  if(c.attack)eff.push('攻击力: '+c.attack+(c.hits>1?' ×'+c.hits+'段':''));
-  if(c.block)eff.push('格挡: '+c.block);
-  if(c.poison)eff.push('施加毒: '+c.poison);
-  if(c.draw)eff.push('抽牌: '+c.draw);
-  if(c.weak)eff.push('施加虚弱: '+c.weak);
-  if(c.vulnerable)eff.push('施加易伤: '+c.vulnerable);
-  if(c.energy)eff.push('获得能量: '+c.energy);
   const c2=document.getElementById('modal-content');
-  c2.innerHTML='<h2><span class="cost">'+(c.cost??'?')+'</span>'+c.name+
-    '<span class="rarity '+(c.rarity||'common')+'">'+(c.rarity||'普通')+'</span></h2>'+
-    '<div class="detail-row"><div class="detail-label">类型</div><div class="detail-value">'+(c.type||'未知')+'</div></div>'+
-    '<div class="detail-row"><div class="detail-label">效果</div><div class="detail-value">'+(eff.length?eff.join('<br>'):(c.description||'无详细数据'))+'</div></div>'+
-    (c.description?'<div class="detail-row"><div class="detail-label">卡牌描述</div><div class="detail-value">'+c.description+'</div></div>':'')+
+  c2.innerHTML='<div class="modal-header">'+cardImg(c,'modal-card-img')+
+    '<div class="modal-info">'+
+    '<h2><span class="cost" style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:#4fc3f7;border-radius:50%;font-size:14px;color:#000;margin-right:8px;">'+c.cost+'</span>'+c.name_cn+'</h2>'+
+    '<div class="detail-row"><div class="detail-label">英文名</div><div class="detail-value">'+c.name_en+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">类型 / 稀有度</div><div class="detail-value">'+c.type+' · '+c.rarity+'</div></div>'+
+    '<div class="detail-row"><div class="detail-label">效果</div><div class="detail-value">'+c.effect+'</div></div>'+
     (c.upgraded?'<div class="detail-row"><div class="detail-label">升级效果</div><div class="detail-value">'+c.upgraded+'</div></div>':'')+
-    '<div class="synergy-box"><div class="label">流派适配</div><div>'+getSynergy(c)+'</div></div>';
+    '<div class="tags">'+(c.tags||[]).map(t=>'<span class="tag">'+t+'</span>').join('')+'</div>'+
+    '</div></div>'+
+    (c.synergy?'<div class="synergy-box"><div class="label">流派适配</div><div>'+c.synergy+'</div></div>':'');
   document.getElementById('modal').classList.add('show');
-}
-function getSynergy(c){
-  const n=c.name.toLowerCase();
-  if(n.includes('毒')||c.poison)return '适合毒流，与 致命毒药、毒雾、催化剂 搭配';
-  if(n.includes('shiv')||n.includes('匕首')||c.shiv)return '适合Shiv流，与 无限刀刃、刀锋之舞 搭配';
-  if(c.block&&c.draw)return '适合格挡流，与 后空翻、逃脱计划 搭配';
-  if(c.draw)return '适合过牌流，与 战术、肾上腺素 搭配';
-  return '通用卡牌，可融入多种流派';
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
