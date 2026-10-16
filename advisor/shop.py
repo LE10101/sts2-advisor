@@ -1,142 +1,179 @@
-"""商店购买决策器：读取 shop 快照，在金币预算内给出性价比推荐。
-
-- 卡牌：用 cardvalue 流派感知评分；性价比 = 评分 / 价格
-- 遗物：给基础价值分（核心遗物高、普通低）
-- 删牌：若卡组有基础牌/诅咒，删牌性价比高
-- 预算约束：按性价比从高到低贪心选取，不超当前金币
-
-对 autoSpire 的 shop 快照做容错解析；无游戏时用内置示例演示。
-"""
-
+"""商店购买决策：预算内性价比贪心（卡牌/遗物/删牌/药水）。适配 STS2 AI Agent 真实 state。"""
 from __future__ import annotations
-
-from typing import Any, Dict, List, Optional
-
+from typing import Optional
+from .model import Card
 from .cardvalue import score_card
 
-# 遗物基础价值（0-10）。未收录给中性 5。
-_RELIC_VALUE = {
-    "蛇之戒指": 7.0, "忍者遗物": 6.5, "毒瓶": 6.0, "刀锋": 5.5,
-    "香炉": 5.0, "古钱币": 5.0,
+
+# 静默猎手视角遗物评分
+RELIC_SCORES = {
+    # 毒流派核心
+    "蛇之戒指": 8.0, "ring_of_the_snake": 8.0,
+    "水银沙漏": 7.5, "mercury_hourglass": 7.5,
+    "风的女儿": 7.0, "daughter_of_the_wind": 7.0,
+    "投斧": 6.5, "throwing_axe": 6.5,
+    # 通用强力
+    "金色珍珠": 6.0, "golden_pearl": 6.0,
+    "草莓": 5.5, "strawberry": 5.5,
+    "金纸": 5.0, "joss_paper": 5.0,
+    "烫嘴可可": 6.0, "very_hot_cocoa": 6.0,
+    "船夹板": 5.0, "horn_cleat": 5.0,
+    "风箱": 5.5, "bellows": 5.5,
+    "古茶具套装": 4.5, "fake_venerable_tea_set": 4.5,
+    "小邮箱": 4.0, "tiny_mailbox": 4.0,
+    "准备之袋": 5.0, "bag_of_preparation": 5.0,
+    # STS1 经典遗物
+    "kunai": 9.0, "shuriken": 8.5, "ornamental_fan": 8.0,
+    "dead_branch": 7.5, "bag_of_marbles": 6.0,
+    "snecko_eye": 7.0, "runic_pyramid": 7.5,
+    "bullet_time": 6.5, "well_laid_plans": 7.0,
+    "tough_bandages": 6.0, "evolve": 5.5,
+    "footwork": 7.0, "after_image": 7.5,
+    "burst": 6.0, "leg_sweep": 5.5,
+}
+
+# 药水评分
+POTION_SCORES = {
+    "毒药水": 8.0, "精炼混沌": 6.0, "火焰药水": 5.0,
+    "敏捷药水": 7.0, "力量药水": 5.0, "再生药水": 4.0,
+    "血瓶": 3.0, "能量药水": 7.0, "烟雾弹": 6.0,
+    "飞刀": 5.0, "万能药": 5.0, "液体记忆": 4.0,
+    "闪电药水": 5.0, "恐惧药水": 4.0, "虚弱药水": 5.0,
+    "易伤药水": 5.0,
 }
 
 
-def _pick(d: Optional[Dict], *keys, default=None):
-    if not d:
-        return default
-    for k in keys:
-        if k in d and d[k] is not None:
-            return d[k]
-    return default
+def _relic_score(name: str) -> float:
+    """遗物评分，未知遗物给默认分。"""
+    name_lower = name.lower()
+    for key, val in RELIC_SCORES.items():
+        if key.lower() in name_lower or name_lower in key.lower():
+            return val
+    return 4.5  # 默认
 
 
-def choose_shop(snap: Dict[str, Any], deck: Optional[List[str]] = None,
-                gold: Optional[int] = None) -> Dict[str, Any]:
-    """读取 shop 快照，返回推荐购买列表。"""
-    s = snap.get("shop", snap) or {}
-    deck = deck or []
-    # 金币优先显式传入，否则从 shop / run 快照读取
-    if gold is None:
-        gold = _pick(s, "gold", default=None)
-        if gold is None:
-            gold = _pick(snap.get("run", {}) or {}, "gold", default=0)
-        gold = gold or 0
+def _potion_score(name: str) -> float:
+    for key, val in POTION_SCORES.items():
+        if key in name:
+            return val
+    return 4.0
 
-    items_raw = _pick(s, "items", "goods", "shop_items", default=[]) or []
-    items = []
-    for it in items_raw:
-        if isinstance(it, dict):
-            items.append(it)
-        elif isinstance(it, str):
-            items.append({"type": "card", "name": it})
 
-    # 解析商品
-    cards, relics, potions, removal = [], [], [], []
-    for it in items:
-        t = str(_pick(it, "type", "kind", default="")).lower()
-        name = _pick(it, "name", "card_name", default="?")
-        price = _pick(it, "price", "cost", default=0) or 0
-        if "relic" in t or "遗物" in name or _pick(it, "relic", default=False):
-            relics.append({"name": name, "price": price})
-        elif "potion" in t or "药水" in name:
-            potions.append({"name": name, "price": price})
-        elif "remove" in t or "删" in name:
-            removal.append({"price": price})
+def choose_shop(snap: dict, deck: Optional[list[Card]] = None) -> dict:
+    """返回 {purchases, total_cost, remaining_gold, reason}。
+
+    适配真实 state（字段名容错）：
+      shop_cards / cards / card_options / items
+      shop_relics / relics / relic_options
+      shop_potions / potions
+      gold / current_gold
+      remove_cost / card_removal_cost
+    """
+    # 金币
+    gold = int(snap.get("gold", snap.get("current_gold",
+                 snap.get("shop", {}).get("gold", 0))))
+
+    # 卡牌（多种字段名容错）
+    shop_cards = (snap.get("shop_cards") or snap.get("cards") or
+                  snap.get("card_options") or snap.get("items") or [])
+    # 遗物
+    relics = (snap.get("shop_relics") or snap.get("relics") or
+              snap.get("relic_options") or [])
+    # 药水
+    potions = (snap.get("shop_potions") or snap.get("potions") or
+               snap.get("potion_options") or [])
+    # 删牌价格
+    remove_cost = int(snap.get("remove_cost",
+                     snap.get("card_removal_cost", 75)))
+
+    purchases = []
+    remaining = gold
+
+    # 1) 卡牌：按 评分/价格 性价比排序
+    card_items = []
+    for c in shop_cards:
+        if isinstance(c, dict):
+            try:
+                card = Card.from_dict(c)
+            except Exception:
+                card = Card(c.get("name", "?"), c.get("energy_cost", 1))
+            price = int(c.get("price", c.get("cost", 50)))
         else:
-            cards.append({"name": name, "price": price, "rarity": _pick(it, "rarity", default="普通")})
+            card = c
+            price = 50
+        score = score_card(card, deck) if deck else score_card(card)
+        ratio = score / max(1, price)
+        card_items.append((card, price, score, ratio))
+    card_items.sort(key=lambda x: x[3], reverse=True)
 
-    # 卡牌性价比
-    card_opts = []
-    for c in cards:
-        sc, reasons = score_card(c["name"], deck, c.get("rarity", "普通"))
-        eff = sc / max(price, 1) if c["price"] > 0 else (sc + 3)
-        card_opts.append({**c, "score": sc, "efficiency": eff, "reasons": reasons})
+    for card, price, score, ratio in card_items:
+        if remaining >= price and ratio > 0.06:
+            purchases.append({"type": "card", "name": card.name,
+                              "price": price, "score": score})
+            remaining -= price
 
-    relic_opts = [{"name": r["name"], "price": r["price"],
-                   "score": _RELIC_VALUE.get(r["name"], 5.0)} for r in relics]
-    potion_opts = [{"name": p["name"], "price": p["price"], "score": 5.0} for p in potions]
+    # 2) 遗物：按评分/价格性价比
+    relic_items = []
+    for r in relics:
+        if isinstance(r, dict):
+            rname = r.get("name", r.get("relic_name", "?"))
+            rprice = int(r.get("price", r.get("cost", 150)))
+        else:
+            rname, rprice = str(r), 150
+        rscore = _relic_score(rname)
+        ratio = rscore / max(1, rprice)
+        relic_items.append((rname, rprice, rscore, ratio))
+    relic_items.sort(key=lambda x: x[3], reverse=True)
 
-    # 删牌：有基础牌/诅咒时性价比高
-    has_basic = any(c in ("打击", "防御", "伤痛", "诅咒") for c in deck)
-    remove_opt = None
-    if removal:
-        rp = removal[0]["price"]
-        remove_opt = {"price": rp, "score": 6.0 if has_basic else 4.0,
-                      "efficiency": (6.0 if has_basic else 4.0) / max(rp, 1)}
+    for rname, rprice, rscore, ratio in relic_items:
+        if remaining >= rprice and ratio > 0.03:
+            purchases.append({"type": "relic", "name": rname,
+                              "price": rprice, "score": rscore})
+            remaining -= rprice
 
-    # 预算贪心：合并所有可买项，按性价比排序
-    buy_pool = []
-    for c in card_opts:
-        buy_pool.append(("card", c))
-    for r in relic_opts:
-        buy_pool.append(("relic", r))
-    if remove_opt and remove_opt["score"] >= 4.0:
-        buy_pool.append(("remove", remove_opt))
+    # 3) 药水
+    potion_items = []
+    for p in potions:
+        if isinstance(p, dict):
+            pname = p.get("name", p.get("description", "?"))
+            pprice = int(p.get("price", p.get("cost", 50)))
+        else:
+            pname, pprice = str(p), 50
+        pscore = _potion_score(pname)
+        ratio = pscore / max(1, pprice)
+        potion_items.append((pname, pprice, pscore, ratio))
+    potion_items.sort(key=lambda x: x[3], reverse=True)
 
-    buy_pool.sort(key=lambda x: -(x[1].get("efficiency", x[1]["score"] / max(x[1]["price"], 1))))
+    for pname, pprice, pscore, ratio in potion_items:
+        if remaining >= pprice and ratio > 0.08:
+            purchases.append({"type": "potion", "name": pname,
+                              "price": pprice, "score": pscore})
+            remaining -= pprice
 
-    # 从最划算的开始买，直到预算不足
-    recommendations = []
-    spent = 0
-    for kind, opt in buy_pool:
-        if opt["price"] <= 0:
-            continue
-        if spent + opt["price"] > gold:
-            continue
-        recommendations.append({"kind": kind, "name": opt.get("name"), "price": opt["price"],
-                                "score": opt["score"]})
-        spent += opt["price"]
-        if len(recommendations) >= 4:
-            break
+    # 4) 删牌：如果牌组有基础打击/防御且预算充足
+    if deck and remaining >= remove_cost:
+        basics = [c for c in deck if c.name in ("打击", "防御", "Strike", "Defend")]
+        if basics:
+            purchases.append({"type": "remove",
+                              "name": f"删除{basics[0].name}",
+                              "price": remove_cost, "score": 5.0})
+            remaining -= remove_cost
 
+    reason_parts = [f"{p['type']}:{p['name']}({p['price']}金)"
+                    for p in purchases]
     return {
-        "phase": "shop",
-        "gold": gold,
-        "recommendations": recommendations,
-        "spent": spent,
-        "cards": card_opts,
-        "relics": relic_opts,
-        "remove": remove_opt,
+        "purchases": purchases,
+        "total_cost": gold - remaining,
+        "remaining_gold": remaining,
+        "reason": "；".join(reason_parts) if reason_parts else "无高性价比物品",
     }
 
 
-def format_shop_result(res: Dict[str, Any]) -> str:
-    lines = [f"== 商店（金币 {res['gold']}） =="]
-    if res["cards"]:
-        lines.append("  卡牌：")
-        for c in res["cards"]:
-            lines.append(f"    {c['name']:8s} 价{c['price']} 分{c['score']:.1f} 效率{c['efficiency']:.2f}")
-    if res["relics"]:
-        lines.append("  遗物：")
-        for r in res["relics"]:
-            lines.append(f"    {r['name']:8s} 价{r['price']} 分{r['score']:.1f}")
-    if res["remove"]:
-        lines.append(f"  删牌：价{res['remove']['price']} 分{res['remove']['score']:.1f}")
-    if res["recommendations"]:
-        lines.append("  推荐购买：")
-        for rec in res["recommendations"]:
-            lines.append(f"    - {rec['kind']} {rec.get('name','')}（{rec['price']}金）")
-        lines.append(f"  合计 {res['spent']} 金，剩 {res['gold']-res['spent']} 金")
-    else:
-        lines.append("  （预算内无可推荐的购买项）")
+def format_shop_result(res: dict) -> str:
+    lines = ["== 商店推荐 =="]
+    lines.append(f"  预算使用: {res['total_cost']}金，剩余 {res['remaining_gold']}金")
+    for p in res["purchases"]:
+        lines.append(f"  ★ 买 {p['name']}  ({p['price']}金, 评分{p['score']:.1f})")
+    if not res["purchases"]:
+        lines.append("  暂无值得购买的物品")
     return "\n".join(lines)
