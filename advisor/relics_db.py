@@ -8,13 +8,13 @@ RELICS = [
     # ========== 静默猎手专属 ==========
     {
         "id": "ring_of_the_serpent",
-        "name": "蛇之戒指",
+        "name": "长蛇戒指",
         "name_en": "Ring of the Serpent",
         "pool": "silent",
         "rarity": "初始",
-        "effect": "在每场战斗开始时，额外抽2张牌。",
+        "effect": "在战斗开始时的前3个回合，你额外抽2张牌。",
         "description": "静默猎手初始遗物",
-        "synergy": "永久过牌加成，所有流派通用",
+        "synergy": "前期过牌加成，帮助建立节奏",
         "image_url": "https://spire-codex.com/static/images/relics/ring_of_the_serpent.webp"
     },
     {
