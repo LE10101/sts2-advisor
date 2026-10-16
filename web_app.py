@@ -674,22 +674,55 @@ INDEX_HTML = """<!DOCTYPE html>
 </div></div>
 
 <!-- 主标题 -->
-<div class="hero">
+<div class="game-title">
   <h1>STS2 决策器</h1>
   <p>杀戮尖塔2 · 静默猎手AI教练</p>
-  <p class="subtitle">实时决策 · 战略复盘 · 图鉴查询</p>
-  <div class="user-menu" id="userMenu" style="margin-top:20px;justify-content:center;"><a href="/login">登录</a><a href="/register">注册</a></div>
+  <div class="user-menu" id="userMenu" style="margin-top:16px;justify-content:center;display:flex;"><a href="/login">登录</a><a href="/register">注册</a></div>
 </div>
 
-<!-- 功能卡片 -->
-<div class="card-grid">
-  <a class="feature-card" href="/live"><div class="icon">⚔️</div><h3>当前对局</h3><p>实时战斗决策推荐、怪物行为显示、牌序记忆、路线/奖励/商店指导</p><span class="status" id="liveStatus">检测中...</span></a>
-  <a class="feature-card" href="/history"><div class="icon">📊</div><h3>历史对局</h3><p>查看所有对局记录，筛选进阶、角色、结果，追踪你的进步</p></a>
-  <a class="feature-card" href="/monsters"><div class="icon">👹</div><h3>怪物图鉴</h3><p>所有怪物的固定行为模式、伤害数值、应对策略</p></a>
-  <a class="feature-card" href="/cards"><div class="icon">🃏</div><h3>卡牌图鉴</h3><p>静默猎手全卡牌效果、升级对比、流派搭配推荐</p></a>
-  <a class="feature-card" href="/relics"><div class="icon">🏺</div><h3>遗物图鉴</h3><p>全遗物效果、稀有度、流派适配，含静默猎手专属和共享遗物</p></a>
-  <a class="feature-card" href="/guide"><div class="icon">📖</div><h3>使用指南</h3><p>三步上手：安装mod → 运行Agent → 打开网页，开始AI辅助</p></a>
-  <a class="feature-card" href="/download"><div class="icon">📥</div><h3>下载本地端</h3><p>下载本地Agent程序和使用指南，一键启动游戏自动决策</p></a>
+<!-- 游戏内图鉴主菜单样式 - 四张羊皮纸卡片 -->
+<div class="codex-menu">
+  <a class="codex-menu-card brown" href="/cards">
+    <div class="icon">🃏</div>
+    <h3>卡牌总览</h3>
+    <p>静默猎手全卡牌<br>效果 · 升级 · 流派</p>
+  </a>
+  <a class="codex-menu-card blue" href="/relics">
+    <div class="icon">🏺</div>
+    <h3>遗物收集</h3>
+    <p>全遗物效果<br>稀有度 · 适配</p>
+  </a>
+  <a class="codex-menu-card green" href="/monsters">
+    <div class="icon">👹</div>
+    <h3>怪物图鉴</h3>
+    <p>怪物行为模式<br>伤害 · 应对策略</p>
+  </a>
+  <a class="codex-menu-card red" href="/live">
+    <div class="icon">⚔️</div>
+    <h3>当前对局</h3>
+    <p>实时AI决策<br>牌序 · 路线指导</p>
+  </a>
+</div>
+
+<!-- 其他功能 -->
+<div style="max-width:900px;margin:0 auto;padding:0 20px 40px;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+    <a href="/history" style="display:block;padding:16px;background:linear-gradient(135deg,#1e1a14,#141210);border:1px solid var(--border-dark);border-radius:6px;text-align:center;text-decoration:none;color:var(--text-cream);transition:all .2s;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold-light)'" onmouseout="this.style.borderColor='var(--border-dark)';this.style.color='var(--text-cream)'">
+      <div style="font-size:24px;margin-bottom:6px;">📊</div>
+      <div style="font-size:14px;font-weight:600;">历史对局</div>
+    </a>
+    <a href="/guide" style="display:block;padding:16px;background:linear-gradient(135deg,#1e1a14,#141210);border:1px solid var(--border-dark);border-radius:6px;text-align:center;text-decoration:none;color:var(--text-cream);transition:all .2s;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold-light)'" onmouseout="this.style.borderColor='var(--border-dark)';this.style.color='var(--text-cream)'">
+      <div style="font-size:24px;margin-bottom:6px;">📖</div>
+      <div style="font-size:14px;font-weight:600;">使用指南</div>
+    </a>
+    <a href="/download" style="display:block;padding:16px;background:linear-gradient(135deg,#1e1a14,#141210);border:1px solid var(--border-dark);border-radius:6px;text-align:center;text-decoration:none;color:var(--text-cream);transition:all .2s;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold-light)'" onmouseout="this.style.borderColor='var(--border-dark)';this.style.color='var(--text-cream)'">
+      <div style="font-size:24px;margin-bottom:6px;">📥</div>
+      <div style="font-size:14px;font-weight:600;">下载本地端</div>
+    </a>
+  </div>
+  <div style="text-align:center;margin-top:16px;">
+    <span class="status" id="liveStatus" style="display:inline-block;padding:4px 12px;border-radius:3px;font-size:12px;background:rgba(184,64,64,.15);color:var(--red-light);border:1px solid var(--red);">检测游戏连接...</span>
+  </div>
 </div>
 
 <!-- 首次访问弹窗 -->
