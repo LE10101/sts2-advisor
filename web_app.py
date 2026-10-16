@@ -1022,13 +1022,13 @@ fetch('/api/monsters').then(r=>r.json()).then(d=>{
 });
 function renderList(){
   const chapters={};
-  allMonsters.forEach(m=>{const c=m.chapter||'未知';if(!chapters[c])chapters[c]=[];chapters[c].push(m);});
+  allMonsters.forEach(m=>{const c=m.act||'未知';if(!chapters[c])chapters[c]=[];chapters[c].push(m);});
   let html='';
   Object.entries(chapters).forEach(([ch,monsters])=>{
     html+='<div class="monster-chapter"><div class="monster-chapter-title">'+ch+'</div>';
     monsters.forEach(m=>{
-      const cls=m.is_elite?'elite':(m.is_boss?'boss':'');
-      html+='<div class="monster-list-item '+cls+'" data-id="'+m.id+'" onclick="selectMonster(''+m.id+'')">'+
+      const cls=m.type==='精英'?'elite':(m.type==='Boss'?'boss':'');
+      html+='<div class="monster-list-item '+cls+'" data-id="'+m.id+'" onclick="selectMonster(\''+m.id+'\')">'+
         (m.image_url?'<img src="'+m.image_url+'" style="width:22px;height:22px;object-fit:contain;">':'👹')+m.name+'</div>';
     });
     html+='</div>';
@@ -1039,16 +1039,17 @@ function selectMonster(id){
   const m=allMonsters.find(x=>x.id===id);if(!m)return;
   document.querySelectorAll('.monster-list-item').forEach(el=>el.classList.remove('selected'));
   document.querySelector('[data-id="'+id+'"]')?.classList.add('selected');
+  const hpText=(m.hp_min&&m.hp_max)?m.hp_min+'-'+m.hp_max:(m.hp||'');
   document.getElementById('display').innerHTML=
-    (m.image_url?'<img src="'+m.image_url+'" onerror="this.style.display='none'">':'')+
+    (m.image_url?'<img src="'+m.image_url+'" onerror="this.style.display=\'none\'">':'')+
     '<div class="m-name">'+m.name+'</div>'+
-    (m.hp?'<div class="m-hp">❤️ '+m.hp+'</div>':'')+
-    (m.strategy?'<div class="m-strategy"><strong style="color:var(--green-light);">应对策略</strong><br>'+m.strategy+'</div>':'');
-  const actions=m.actions||[];
-  document.getElementById('actions').innerHTML=actions.length?
-    actions.map(a=>'<div class="monster-action"><div class="a-name">'+a.name+'</div>'+
-    (a.damage?'<div class="a-dmg">伤害: '+a.damage+'</div>':'')+
-    (a.effect?'<div style="font-size:11px;color:var(--text-gray);margin-top:2px;">'+a.effect+'</div>':'')+'</div>').join('')
+    (hpText?'<div class="m-hp">❤️ '+hpText+'</div>':'')+
+    (m.tip?'<div class="m-strategy"><strong style="color:var(--green-light);">应对策略</strong><br>'+m.tip+'</div>':'');
+  const moves=m.moves||[];
+  document.getElementById('actions').innerHTML=moves.length?
+    moves.map(a=>'<div class="monster-action"><div class="a-name">'+a.name+'</div>'+
+    (a.damage?'<div class="a-dmg">伤害: '+a.damage+(a.hits>1?' ×'+a.hits:'')+'</div>':'')+
+    (a.desc?'<div style="font-size:11px;color:var(--text-gray);margin-top:2px;">'+a.desc+'</div>':'')+'</div>').join('')
     :'<div class="empty">暂无行动数据</div>';
 }
 </script>
@@ -1135,10 +1136,16 @@ function renderCards(){
   const el=document.getElementById('grid');
   if(!list.length){el.innerHTML='<div class="empty">未找到卡牌</div>';return;}
   el.innerHTML=list.map(c=>{
-    const img=c.image_url?'<img class="game-card-img" src="'+c.image_url+'" onclick="showDetail(''+c.id+'')" onerror="this.outerHTML='<div style=\'width:100%;height:260px;background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:48px;cursor:pointer;\' onclick=\'showDetail("'+c.id+'")\'>🃏</div>'">':
-    '<div style="width:100%;height:260px;background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:48px;cursor:pointer;" onclick="showDetail(''+c.id+'')">🃏</div>';
-    return img;
+    return '<img class="game-card-img" src="'+c.image_url+'" data-id="'+c.id+'" alt="'+c.name_cn+'">';
   }).join('');
+  // 绑定点击事件和错误处理
+  el.querySelectorAll('.game-card-img').forEach(img=>{
+    img.addEventListener('click',()=>showDetail(img.dataset.id));
+    img.addEventListener('error',function(){
+      this.outerHTML='<div class="game-card-img" data-id="'+this.dataset.id+'" style="width:100%;height:260px;background:linear-gradient(135deg,#2a2018,#1a120c);border:2px solid #4a3a25;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:48px;cursor:pointer;">🃏</div>';
+      el.querySelector('[data-id="'+this.dataset.id+'"]').addEventListener('click',()=>showDetail(this.dataset.id));
+    });
+  });
 }
 function showDetail(id){
   const c=allCards.find(x=>x.id===id);if(!c)return;
@@ -1211,9 +1218,8 @@ function renderRelics(){
       html+='<div class="relic-group-title">'+r+' <span class="count">('+groups[r].length+')</span></div>';
       html+='<div class="relic-icon-grid">';
       groups[r].forEach(rel=>{
-        html+='<div class="relic-icon '+rarityClass(r)+'" onclick="showDetail(''+rel.id+'')">'+
-          (rel.image_url?'<img src="'+rel.image_url+'" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">':'')+
-          '<div style="display:none;width:48px;height:48px;align-items:center;justify-content:center;font-size:28px;margin:0 auto 4px;">🏺</div>'+
+        html+='<div class="relic-icon '+rarityClass(r)+'" data-id="'+rel.id+'">'+
+          (rel.image_url?'<img src="'+rel.image_url+'" alt="'+rel.name+'">':'')+
           '<div class="name">'+rel.name+'</div>'+
           '<div class="tooltip"><div class="t-name">'+rel.name+'</div><div class="t-effect">'+rel.effect+'</div></div>'+
           '</div>';
@@ -1226,8 +1232,8 @@ function renderRelics(){
       html+='<div class="relic-group-title">'+r+' <span class="count">('+items.length+')</span></div>';
       html+='<div class="relic-icon-grid">';
       items.forEach(rel=>{
-        html+='<div class="relic-icon '+rarityClass(r)+'" onclick="showDetail(''+rel.id+'')">'+
-          (rel.image_url?'<img src="'+rel.image_url+'" onerror="this.style.display='none'">':'')+
+        html+='<div class="relic-icon '+rarityClass(r)+'" data-id="'+rel.id+'">'+
+          (rel.image_url?'<img src="'+rel.image_url+'" alt="'+rel.name+'">':'')+
           '<div class="name">'+rel.name+'</div>'+
           '<div class="tooltip"><div class="t-name">'+rel.name+'</div><div class="t-effect">'+rel.effect+'</div></div></div>';
       });
@@ -1237,6 +1243,10 @@ function renderRelics(){
   html+='</div>';
   if(!list.length)html='<div class="empty">未找到遗物</div>';
   document.getElementById('relicContent').innerHTML=html;
+  // 绑定点击事件
+  document.querySelectorAll('.relic-icon').forEach(el=>{
+    el.addEventListener('click',()=>showDetail(el.dataset.id));
+  });
 }
 function showDetail(id){
   const r=allRelics.find(x=>x.id===id);if(!r)return;
