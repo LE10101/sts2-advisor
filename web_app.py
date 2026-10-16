@@ -282,6 +282,26 @@ def api_card_detail(card_name):
     return jsonify({"error": "卡牌未找到"}), 404
 
 
+# ============ 遗物API ============
+@app.route("/relics")
+def relics():
+    return render_template_string(RELICS_HTML)
+
+@app.route("/api/relics")
+def api_relics():
+    from advisor.relics_db import RELICS, RELIC_STATS
+    return jsonify({"relics": RELICS, "stats": RELIC_STATS})
+
+@app.route("/api/relics/<relic_name>")
+def api_relic_detail(relic_name):
+    """遗物详情API"""
+    from advisor.relics_db import get_relic_by_name
+    r = get_relic_by_name(relic_name)
+    if r:
+        return jsonify({"relic": r})
+    return jsonify({"error": "遗物未找到"}), 404
+
+
 # ============ 用户认证API ============
 @app.route("/api/auth/register", methods=["POST"])
 def api_register():
@@ -410,6 +430,7 @@ body { font-family:-apple-system,'Segoe UI',sans-serif; background:#0f1923; colo
     <a class="card" href="/history"><div class="icon">📊</div><h3>历史对局</h3><p>查看所有对局记录，筛选进阶、角色、结果，追踪你的进步</p></a>
     <a class="card" href="/monsters"><div class="icon">👹</div><h3>怪物图鉴</h3><p>所有怪物的固定行为模式、伤害数值、应对策略</p></a>
     <a class="card" href="/cards"><div class="icon">🃏</div><h3>卡牌图鉴</h3><p>静默猎手全卡牌效果、升级对比、流派搭配推荐</p></a>
+    <a class="card" href="/relics"><div class="icon">🏺</div><h3>遗物图鉴</h3><p>全遗物效果、稀有度、流派适配，含静默猎手专属和共享遗物</p></a>
   </div>
 </div>
 <div class="footer">STS2 Advisor v8.0 · 基于MCTS+评估器 · 数据来自STS2 AI Agent mod</div>
@@ -882,6 +903,149 @@ function showDetail(id){
     '<div class="tags">'+(c.tags||[]).map(t=>'<span class="tag">'+t+'</span>').join('')+'</div>'+
     '</div></div>'+
     (c.synergy?'<div class="synergy-box"><div class="label">流派适配</div><div>'+c.synergy+'</div></div>':'');
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+</script>
+</body></html>"""
+
+RELICS_HTML = """<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>遗物图鉴 - STS2决策器</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
+.topbar{background:#1a2a3a;padding:12px 20px;border-bottom:1px solid #2d4a6a;}
+.topbar a{color:#4fc3f7;text-decoration:none;}
+.container{max-width:1200px;margin:0 auto;padding:16px;}
+.stats-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+.stat-item{background:#1a2a3a;padding:8px 14px;border-radius:8px;border:1px solid #2d4a6a;}
+.stat-item .num{font-size:18px;font-weight:bold;color:#ffd700;}
+.stat-item .label{font-size:11px;color:#8899aa;}
+.search-box{margin-bottom:12px;}
+.search-box input{width:100%;padding:10px 16px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:8px;color:#e0e6ed;font-size:14px;}
+.search-box input:focus{outline:none;border-color:#ffd700;}
+.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.filter-btn{padding:6px 14px;background:#1a2a3a;border:1px solid #2d4a6a;border-radius:20px;color:#8899aa;cursor:pointer;font-size:13px;}
+.filter-btn.active{background:#ffd700;color:#000;border-color:#ffd700;}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}
+.relic{background:#1a2a3a;border-radius:10px;padding:12px;border:1px solid #2d4a6a;cursor:pointer;transition:all .2s;text-align:center;}
+.relic:hover{border-color:#ffd700;background:#1f3347;transform:translateY(-3px);box-shadow:0 4px 12px rgba(255,215,0,.2);}
+.relic-img{width:64px;height:64px;object-fit:contain;margin:0 auto 8px;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5));}
+.relic-img-fallback{width:64px;height:64px;margin:0 auto 8px;background:linear-gradient(135deg,#8b6914,#5a4510);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.relic h3{color:#ffd700;margin-bottom:4px;font-size:14px;}
+.relic .rarity{font-size:10px;padding:2px 8px;border-radius:10px;display:inline-block;margin-bottom:6px;}
+.relic .rarity.初始{background:#666;color:#fff;}
+.relic .rarity.普通{background:#555;color:#fff;}
+.relic .rarity.罕见{background:#4a7c4a;color:#fff;}
+.relic .rarity.稀有{background:#b8860b;color:#fff;}
+.relic .rarity.Boss{background:#8b0000;color:#ffaaaa;}
+.relic .rarity.商店{background:#4a6a8a;color:#fff;}
+.relic .rarity.事件{background:#6a4a8a;color:#fff;}
+.relic .pool{font-size:11px;color:#8899aa;margin-bottom:4px;}
+.relic .effect{color:#aaa;font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+/* 详情弹窗 */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:100;justify-content:center;align-items:center;padding:20px;}
+.modal-overlay.show{display:flex;}
+.modal{background:#1a2a3a;border-radius:12px;padding:24px;max-width:550px;width:100%;max-height:85vh;overflow-y:auto;border:2px solid #ffd700;position:relative;}
+.modal-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.modal-relic-img{width:80px;height:80px;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5));}
+.modal-relic-img-fallback{width:80px;height:80px;background:linear-gradient(135deg,#8b6914,#5a4510);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;}
+.modal-title h2{color:#ffd700;margin-bottom:4px;}
+.modal-title .meta{color:#8899aa;font-size:13px;}
+.modal .close-btn{position:absolute;top:16px;right:16px;background:none;border:none;color:#8899aa;font-size:24px;cursor:pointer;z-index:10;}
+.modal .detail-row{margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #2d4a6a;}
+.modal .detail-label{color:#8899aa;font-size:12px;margin-bottom:4px;}
+.modal .detail-value{color:#e0e6ed;font-size:14px;line-height:1.6;}
+.modal .synergy-box{background:rgba(255,215,0,.1);border-left:3px solid #ffd700;padding:10px;margin-top:12px;border-radius:4px;}
+.modal .synergy-box .label{color:#ffd700;font-size:12px;font-weight:bold;margin-bottom:4px;}
+.empty{text-align:center;padding:60px;color:#556677;grid-column:1/-1;}
+</style></head>
+<body>
+<div class="topbar"><a href="/">← 返回首页</a> | 遗物图鉴</div>
+<div class="container">
+  <div class="stats-bar" id="stats"></div>
+  <div class="search-box"><input type="text" id="search" placeholder="搜索遗物名称或效果..." oninput="renderRelics()"></div>
+  <div class="filters" id="filters">
+    <button class="filter-btn active" data-filter="all">全部</button>
+    <button class="filter-btn" data-filter="silent">静默猎手</button>
+    <button class="filter-btn" data-filter="shared">共享</button>
+    <button class="filter-btn" data-filter="初始">初始</button>
+    <button class="filter-btn" data-filter="普通">普通</button>
+    <button class="filter-btn" data-filter="罕见">罕见</button>
+    <button class="filter-btn" data-filter="稀有">稀有</button>
+    <button class="filter-btn" data-filter="Boss">Boss</button>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <button class="close-btn" onclick="closeModal()">×</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+<script>
+let allRelics=[];
+let currentFilter='all';
+fetch('/api/relics').then(r=>r.json()).then(d=>{
+  allRelics=d.relics||[];
+  renderStats();
+  renderRelics();
+});
+function renderStats(){
+  const s={};
+  allRelics.forEach(r=>{s[r.rarity]=(s[r.rarity]||0)+1;});
+  document.getElementById('stats').innerHTML=
+    '<div class="stat-item"><div class="num">'+allRelics.length+'</div><div class="label">遗物总数</div></div>'+
+    Object.entries(s).map(([r,n])=>'<div class="stat-item"><div class="num">'+n+'</div><div class="label">'+r+'</div></div>').join('');
+}
+document.getElementById('filters').addEventListener('click',e=>{
+  if(e.target.classList.contains('filter-btn')){
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    currentFilter=e.target.dataset.filter;
+    renderRelics();
+  }
+});
+function relicImg(r,cls){
+  if(r.image_url)return '<img class="'+cls+'" src="'+r.image_url+'" alt="'+r.name+'" onerror="this.outerHTML=\\'<div class=\\''+cls+'-fallback\\'>🏺</div>\\'">';
+  return '<div class="'+cls+'-fallback">🏺</div>';
+}
+function renderRelics(){
+  const q=document.getElementById('search').value.toLowerCase();
+  let list=allRelics;
+  if(currentFilter!=='all'){
+    list=list.filter(r=>r.rarity===currentFilter||r.pool===currentFilter);
+  }
+  if(q){
+    list=list.filter(r=>
+      r.name.toLowerCase().includes(q)||
+      r.name_en.toLowerCase().includes(q)||
+      r.effect.toLowerCase().includes(q)||
+      (r.synergy&&r.synergy.toLowerCase().includes(q))
+    );
+  }
+  const el=document.getElementById('grid');
+  if(!list.length){el.innerHTML='<div class="empty">未找到遗物</div>';return;}
+  el.innerHTML=list.map(r=>'<div class="relic" onclick="showDetail(\\''+r.id+'\\')">'+
+    relicImg(r,'relic-img')+
+    '<h3>'+r.name+'</h3>'+
+    '<span class="rarity '+r.rarity+'">'+r.rarity+'</span>'+
+    '<div class="pool">'+(r.pool==='silent'?'静默猎手专属':'共享')+'</div>'+
+    '<div class="effect">'+r.effect+'</div>'+
+  '</div>').join('');
+}
+function showDetail(id){
+  const r=allRelics.find(x=>x.id===id);
+  if(!r)return;
+  const c=document.getElementById('modal-content');
+  c.innerHTML='<div class="modal-header">'+relicImg(r,'modal-relic-img')+
+    '<div class="modal-title"><h2>'+r.name+'</h2><div class="meta">'+r.name_en+' · '+r.rarity+' · '+(r.pool==='silent'?'静默猎手专属':'共享')+'</div></div></div>'+
+    '<div class="detail-row"><div class="detail-label">效果</div><div class="detail-value">'+r.effect+'</div></div>'+
+    (r.description?'<div class="detail-row"><div class="detail-label">说明</div><div class="detail-value">'+r.description+'</div></div>':'')+
+    (r.synergy?'<div class="synergy-box"><div class="label">流派适配</div><div>'+r.synergy+'</div></div>':'');
   document.getElementById('modal').classList.add('show');
 }
 function closeModal(){document.getElementById('modal').classList.remove('show');}
