@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: sts2-advisor
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn web_app:app -b 0.0.0.0:$PORT --timeout 120
+    envVars:
+      - key: STS2_MODE
+        value: cloud
+      - key: STS2_DB_PATH
+        value: /tmp/sts2_cloud.db
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    healthCheckPath: /api/status
+    autoDeploy: true

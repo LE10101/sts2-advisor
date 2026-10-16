@@ -1,0 +1,73 @@
+<html style="margin:0;padding:0;">
+<title>杀戮尖塔2 决策器 · 架构总览</title>
+<div style="width:100%;box-sizing:border-box;font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;padding:14px;background:#f6f7f9;color:#1a1a1a;">
+<style>
+  .wrap{display:flex;flex-direction:column;gap:10px;max-width:860px;margin:0 auto;}
+  .title{font-size:20px;font-weight:700;margin:0 0 2px;}
+  .subtitle{font-size:13px;color:#666;margin:0 0 6px;}
+  .layer{border:1px solid #d8dce3;border-radius:10px;padding:10px 12px;background:#fff;}
+  .layer-label{font-size:12px;font-weight:700;letter-spacing:1px;color:#fff;background:#3b5bdb;display:inline-block;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
+  .cards{display:flex;flex-wrap:wrap;gap:8px;}
+  .card{flex:1 1 200px;border:1px solid #cbd2dc;border-left:4px solid #748ffc;border-radius:8px;padding:8px 10px;background:#fbfcff;font-size:14px;line-height:1.5;}
+  .card b{display:block;font-size:15px;}
+  .card.small{flex:1 1 200px;}
+  .strong{border-left-color:#fa5252;background:#fff5f5;}
+  .train{border-left-color:#20c997;background:#f1fbf7;}
+  .out{border-left-color:#7048e8;background:#f5f0ff;text-align:center;font-weight:600;}
+  .flow{text-align:center;font-size:15px;color:#3b5bdb;font-weight:700;line-height:1;}
+  .sub{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding-top:8px;border-top:1px dashed #d8dce3;}
+  .tag{font-size:12px;color:#fff;background:#495057;border-radius:4px;padding:1px 6px;display:inline-block;margin-top:2px;}
+  .tag.g{background:#2b8a3e;}.tag.b{background:#1971c2;}.tag.o{background:#e8590c;}
+  @media(max-width:430px){ .card{flex:1 1 100%;} .title{font-size:18px;} }
+</style>
+<div class="wrap">
+  <h2 class="title">杀戮尖塔2 决策器 · 架构与决策流程</h2>
+  <p class="subtitle">静默猎手 · MCTS 实时推荐 · 纯 Python 标准库 · V1→V4</p>
+
+  <div class="layer">
+    <div class="layer-label" style="background:#495057;">输入层</div>
+    <div class="cards">
+      <div class="card"><b>autoSpire 真实局</b>GET /state · POST /action<span class="tag b">HTTP 8765/8766</span><span class="tag o">真实模式</span></div>
+      <div class="card"><b>离线示例快照</b>内置静默猎手战斗样例<span class="tag g">offline 自测</span></div>
+    </div>
+  </div>
+
+  <div class="flow">▼ &nbsp;phase 路由（combat / map / reward / shop）</div>
+
+  <div class="layer">
+    <div class="layer-label">决策核心 · 多阶段路由（CLI）</div>
+    <div class="cards">
+      <div class="card strong"><b>战斗 MCTS</b>UCT 搜索 · 候选动作按预期收益排序</div>
+      <div class="card"><b>路线规划</b>节点类型评分 + 前瞻</div>
+      <div class="card"><b>奖励选卡</b>流派感知价值评分</div>
+      <div class="card"><b>商店购买</b>预算内性价比贪心</div>
+    </div>
+    <div class="sub">
+      <div class="card small"><b>战斗模拟器</b>毒 / 小刀 / 弃牌 / Sly / 敏捷 / 能力牌</div>
+      <div class="card small strong"><b>SL 牌序记忆</b>SL / 抽牌后自动记真实牌序，按真实牌序确定性推演</div>
+    </div>
+  </div>
+
+  <div class="flow">▼ &nbsp;增强与优化</div>
+
+  <div class="layer">
+    <div class="layer-label" style="background:#2b8a3e;">增强与优化（V3 · V4）</div>
+    <div class="cards">
+      <div class="card"><b>多特征评估器</b>9 维加权 · 默认启发式<span class="tag g">V3</span></div>
+      <div class="card"><b>支配剪枝</b>目标裁剪 / 去重，分支减半<span class="tag g">V3</span></div>
+      <div class="card"><b>缓存 + 早停</b>约 2 倍提速<span class="tag b">V4</span></div>
+      <div class="card train"><b>self-play 训练</b>纯 Python MLP/回归 · 可选 --model<span class="tag">V4</span></div>
+      <div class="card train"><b>真实局校准</b>--dump 存帧 + calibrate 报告<span class="tag">V4</span></div>
+    </div>
+  </div>
+
+  <div class="flow">▼</div>
+
+  <div class="layer">
+    <div class="cards">
+      <div class="card out"><b>实时排序推荐</b>战斗 / 路线 / 奖励 / 商店 → 玩家执行 · 可选半自动</div>
+    </div>
+  </div>
+</div>
+</div>
+</html>
