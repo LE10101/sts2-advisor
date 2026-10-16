@@ -1,19 +1,16 @@
 """
 本地云端推送Agent
-运行在用户电脑上，读取游戏状态→运行MCTS→推送到云端网站
-不需要运行Web服务器，云端网站永久在线
+读取游戏状态 -> 运行MCTS -> 推送到云端网站
+用法: python cloud_agent.py --server https://your-app.onrender.com --token YOUR_TOKEN
 """
 import json
-import os
-import sys
 import time
+import hashlib
+import argparse
 import urllib.request
 from datetime import datetime
 
-# 添加项目路径
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from advisor.client import AutoSpireClient
+from advisor.client import Sts2AgentClient as AutoSpireClient
 from advisor.model import CombatState
 from advisor.mcts import MCTS
 from advisor.policy import greedy_policy
@@ -27,218 +24,164 @@ from advisor.shop import choose_shop
 class CloudAgent:
     """本地云端推送Agent"""
 
-    def __init__(self, cloud_url: str = "", game_host: str = "127.0.0.1",
-                 game_port: int = 8080, interval: float = 1.5):
-        self.cloud_url = cloud_url or os.environ.get(
-            "STS2_CLOUD_URL", "https://sts2-advisor.onrender.com")
-        self.client = AutoSpireClient(host=game_host, port=game_port)
+    def __init__(self, server_url: str, token: str = "", interval: float = 1.5):
+        self.server_url = server_url.rstrip("/")
+        self.token = token
+        self.interval = interval
+        self.client = AutoSpireClient(host="127.0.0.1", port=8080)
         self.mcts = MCTS(default_policy=greedy_policy, seed=42)
         self.draw_memory = DrawOrderMemory()
-        self.interval = interval
-
-        # 对局记录
-        self.run_id = None
-        self.current_floor = 0
-        self.last_phase = ""
-        self.state_hash = ""
-
-        print(f"=" * 50)
-        print(f"STS2 Cloud Agent")
-        print(f"=" * 50)
-        print(f"云端地址: {self.cloud_url}")
-        print(f"游戏API: http://{game_host}:{game_port}")
-        print(f"推送间隔: {interval}秒")
-        print(f"=" * 50)
+        self.last_state_hash = ""
+        self.current_run_id = None
+        self.running = False
 
     def _post(self, path: str, data: dict) -> dict:
-        """推送数据到云端"""
+        """发送POST请求到云端"""
+        url = f"{self.server_url}{path}"
+        headers = {"Content-Type": "application/json"}
+        if self.token:
+            headers["Authorization"] = f"Bearer {self.token}"
         try:
             req = urllib.request.Request(
-                f"{self.cloud_url}{path}",
-                data=json.dumps(data).encode(),
-                headers={"Content-Type": "application/json"},
+                url,
+                data=json.dumps(data, ensure_ascii=False).encode("utf-8"),
+                headers=headers,
                 method="POST"
             )
             with urllib.request.urlopen(req, timeout=10) as resp:
-                return json.loads(resp.read().decode())
+                return json.loads(resp.read().decode("utf-8"))
         except Exception as e:
-            print(f"  [推送失败] {path}: {e}")
-            return {"ok": False, "error": str(e)}
+            return {"error": str(e)}
 
-    def _get_game_state(self):
-        """获取游戏状态"""
-        try:
-            return self.client.get_state()
-        except Exception as e:
-            return {"error": str(e), "screen": "disconnected"}
-
-    def _compute_recommendation(self, snap: dict) -> dict:
-        """计算推荐（战斗MCTS / 路线 / 奖励 / 商店）"""
+    def _state_hash(self, snap: dict) -> str:
         d = snap.get("data", snap)
-        screen = d.get("screen", "")
-
-        if screen == "COMBAT":
-            combat_snap = d.get("combat", d)
-            state = CombatState.from_snapshot(combat_snap)
-            self.draw_memory.observe_new_cards(state.hand)
-
-            root = self.mcts.search(state, iterations=500)
-            ranked = self.mcts.ranked_actions(root)
-            best = ranked[0][0] if ranked else None
-            reason = explain_combat(state, best, ranked)
-
-            # 构建已知牌序
-            known_order = []
-            for i in range(self.draw_memory.known_length()):
-                c = self.draw_memory.peek(i)
-                if c:
-                    known_order.append(c.name)
-
-            # 动作转字典
-            def action_to_dict(action):
-                if action.kind == "end_turn":
-                    return {"kind": "end_turn", "label": "结束回合"}
-                if action.kind == "play_card" and action.card:
-                    target = "自己"
-                    if action.target_index >= 0 and action.target_index < len(state.enemies):
-                        target = state.enemies[action.target_index].name
-                    return {"kind": "play_card", "card": action.card.name,
-                            "cost": action.card.cost, "target": target,
-                            "label": f"打[{action.card.name}]→{target}"}
-                return {"kind": action.kind, "label": action.kind}
-
-            return {
-                "phase": "combat",
-                "best": action_to_dict(best) if best else None,
-                "ranked": [{"action": action_to_dict(a), "value": v, "visits": n}
-                           for a, v, n in ranked[:5]],
-                "reason": reason,
-                "state": {
-                    "hp": state.player_hp, "max_hp": state.player_max_hp,
-                    "block": state.player_block, "energy": state.energy,
-                    "turn": state.turn,
-                    "hand": [{"name": c.name, "cost": c.cost, "playable": c.playable}
-                             for c in state.hand],
-                    "enemies": [{
-                        "name": e.name, "hp": e.hp, "max_hp": e.max_hp,
-                        "block": e.block, "poison": e.poison,
-                        "intent_type": e.intent_type,
-                        "intent_damage": e.intent_total_damage,
-                        "is_aoe": e.is_aoe
-                    } for e in state.enemies]
-                },
-                "draw_order": known_order
-            }
-        elif screen == "MAP":
-            return {"phase": "map", "recommendation": choose_route(snap)}
-        elif screen == "REWARD":
-            return {"phase": "reward", "recommendation": choose_reward(snap)}
-        elif screen == "SHOP":
-            return {"phase": "shop", "recommendation": choose_shop(snap)}
-        else:
-            return {"phase": screen, "message": "等待游戏阶段..."}
-
-    def _update_run(self, snap: dict):
-        """更新对局记录"""
-        d = snap.get("data", snap)
-        run = d.get("run", {}) or {}
-        floor = run.get("floor", 0)
-
-        # 新对局开始
-        if floor < self.current_floor or self.run_id is None:
-            self.run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-            print(f"\n[新对局] {self.run_id}")
-
-        self.current_floor = floor
-
-        # 推送对局数据
-        run_data = {
-            "id": self.run_id,
-            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "character": "静默猎手",
-            "ascension": run.get("ascension_level", 0),
-            "current_hp": run.get("current_hp", 70),
-            "max_hp": run.get("max_hp", 70),
-            "gold": run.get("gold", 99),
-            "floor": floor,
-            "max_floor": max(floor, self.current_floor),
-            "deck": [c.get("name", "?") for c in run.get("deck", [])],
-            "relics": [r.get("name", "?") if isinstance(r, dict) else str(r)
-                       for r in run.get("relics", [])],
-            "result": "进行中"
+        relevant = {
+            "screen": d.get("screen"),
+            "turn": d.get("turn"),
+            "hand": [c.get("name") for c in d.get("combat", {}).get("hand", [])],
         }
-        self._post("/api/agent/run", run_data)
+        return hashlib.md5(json.dumps(relevant, sort_keys=True).hexdigest().encode()).hexdigest()
+
+    def _get_combat_rec(self, snap: dict) -> dict:
+        d = snap.get("data", snap)
+        combat_snap = d.get("combat", d)
+        state = CombatState.from_snapshot(combat_snap)
+        self.draw_memory.observe_new_cards(state.hand)
+
+        root = self.mcts.search(state, iterations=500)
+        ranked = self.mcts.ranked_actions(root)
+        best = ranked[0][0] if ranked else None
+        reason = explain_combat(state, best, ranked)
+
+        known_order = []
+        for i in range(self.draw_memory.known_length()):
+            c = self.draw_memory.peek(i)
+            if c:
+                known_order.append(c.name)
+
+        return {
+            "phase": "combat",
+            "best": self._action_to_dict(best, state) if best else None,
+            "ranked": [{"action": self._action_to_dict(a, state), "value": v, "visits": n} for a, v, n in ranked[:5]],
+            "reason": reason,
+            "state": self._state_to_dict(state),
+            "draw_order": known_order,
+        }
+
+    def _action_to_dict(self, action, state) -> dict:
+        if action.kind == "end_turn":
+            return {"kind": "end_turn", "label": "结束回合"}
+        if action.kind == "play_card" and action.card:
+            target = "自己"
+            if action.target_index >= 0 and action.target_index < len(state.enemies):
+                target = state.enemies[action.target_index].name
+            return {"kind": "play_card", "card": action.card.name,
+                    "cost": action.card.cost, "target": target,
+                    "label": f"打[{action.card.name}]\u2192{target}"}
+        return {"kind": action.kind, "label": action.kind}
+
+    def _state_to_dict(self, state) -> dict:
+        return {
+            "hp": state.player_hp, "max_hp": state.player_max_hp,
+            "block": state.player_block, "energy": state.energy,
+            "hand": [{"name": c.name, "cost": c.cost, "playable": c.playable} for c in state.hand],
+            "enemies": [{
+                "name": e.name, "hp": e.hp, "max_hp": e.max_hp,
+                "block": e.block, "poison": e.poison,
+                "intent_type": e.intent_type, "intent_damage": e.intent_total_damage,
+                "is_aoe": e.is_aoe
+            } for e in state.enemies],
+            "turn": state.turn
+        }
+
+    def tick(self):
+        """单次轮询"""
+        try:
+            snap = self.client.get_state()
+        except Exception as e:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] 游戏未连接: {e}")
+            return
+
+        h = self._state_hash(snap)
+        if h == self.last_state_hash:
+            return  # 状态未变化，跳过
+        self.last_state_hash = h
+
+        d = snap.get("data", snap)
+        screen = d.get("screen", "UNKNOWN")
+
+        # 根据屏幕类型生成推荐
+        if screen == "COMBAT":
+            recommendation = self._get_combat_rec(snap)
+        elif screen == "MAP":
+            recommendation = {"phase": "map", "recommendation": choose_route(snap)}
+        elif screen == "REWARD":
+            recommendation = {"phase": "reward", "recommendation": choose_reward(snap)}
+        elif screen == "SHOP":
+            recommendation = {"phase": "shop", "recommendation": choose_shop(snap)}
+        else:
+            recommendation = {"phase": screen.lower(), "message": "等待游戏阶段..."}
+
+        # 推送到云端
+        result = self._post("/api/agent/state", {
+            "screen": screen,
+            "phase": recommendation.get("phase", "unknown"),
+            "state": d,
+            "recommendation": recommendation,
+        })
+
+        phase = recommendation.get("phase", "?")
+        best = recommendation.get("best", {}).get("label", "")
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] {phase}: {best} (推送: {'OK' if result.get('ok') else result.get('error', '?')})")
 
     def run(self):
-        """主循环"""
-        print("\n开始监控，按 Ctrl+C 停止...\n")
-        try:
-            while True:
-                snap = self._get_game_state()
+        """持续运行"""
+        self.running = True
+        print("=" * 50)
+        print(f"STS2 Cloud Agent 启动")
+        print(f"服务器: {self.server_url}")
+        print(f"轮询间隔: {self.interval}秒")
+        print("=" * 50)
+        print("按 Ctrl+C 停止\n")
 
-                if "error" in snap:
-                    print(f"\r等待游戏连接... ({snap['error'][:30]})", end="", flush=True)
-                    time.sleep(self.interval)
-                    continue
+        while self.running:
+            try:
+                self.tick()
+            except KeyboardInterrupt:
+                break
+            except Exception as e:
+                print(f"错误: {e}")
+            time.sleep(self.interval)
 
-                d = snap.get("data", snap)
-                screen = d.get("screen", "")
-                phase = screen
-
-                # 状态去重
-                state_str = json.dumps(d, sort_keys=True, ensure_ascii=False)[:500]
-                current_hash = hash(state_str)
-                if current_hash == self.state_hash and phase == self.last_phase:
-                    time.sleep(self.interval)
-                    continue
-                self.state_hash = current_hash
-                self.last_phase = phase
-
-                # 计算推荐
-                recommendation = self._compute_recommendation(snap)
-
-                # 推送到云端
-                self._post("/api/agent/state", {
-                    "screen": screen,
-                    "phase": recommendation.get("phase", phase),
-                    "state": d,
-                    "recommendation": recommendation
-                })
-
-                # 更新对局记录
-                self._update_run(snap)
-
-                # 控制台输出
-                ts = datetime.now().strftime("%H:%M:%S")
-                if recommendation.get("phase") == "combat" and recommendation.get("best"):
-                    print(f"[{ts}] 战斗: {recommendation['best']['label']} | {recommendation.get('reason', '')[:50]}")
-                elif recommendation.get("phase") == "map":
-                    print(f"[{ts}] 路线: {json.dumps(recommendation.get('recommendation', {}), ensure_ascii=False)[:50]}")
-                elif recommendation.get("phase") == "reward":
-                    print(f"[{ts}] 奖励: {json.dumps(recommendation.get('recommendation', {}), ensure_ascii=False)[:50]}")
-                elif recommendation.get("phase") == "shop":
-                    print(f"[{ts}] 商店: {json.dumps(recommendation.get('recommendation', {}), ensure_ascii=False)[:50]}")
-                else:
-                    print(f"[{ts}] {screen}")
-
-                time.sleep(self.interval)
-
-        except KeyboardInterrupt:
-            print("\n\n停止监控")
-            # 标记对局结束
-            if self.run_id:
-                self._post("/api/agent/run", {
-                    "id": self.run_id,
-                    "result": "已结束"
-                })
+        print("\nAgent已停止")
 
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser(description="STS2 云端推送Agent")
-    parser.add_argument("--url", default="", help="云端网站地址")
-    parser.add_argument("--interval", type=float, default=1.5, help="推送间隔（秒）")
+    parser.add_argument("--server", default="http://127.0.0.1:8766", help="云端服务器地址")
+    parser.add_argument("--token", default="", help="用户登录token")
+    parser.add_argument("--interval", type=float, default=1.5, help="轮询间隔(秒)")
     args = parser.parse_args()
 
-    agent = CloudAgent(cloud_url=args.url, interval=args.interval)
+    agent = CloudAgent(args.server, args.token, args.interval)
     agent.run()
