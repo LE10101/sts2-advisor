@@ -586,3 +586,24 @@ def search_monsters(query: str) -> list:
     """搜索怪物"""
     query = query.lower()
     return [m for m in MONSTER_DB if query in m["name"].lower() or query in m.get("tip", "").lower()]
+
+
+# 自动为每个怪物添加图片URL（来自spire-codex CDN）
+SPIRE_CODEX_MONSTER_BASE = "https://spire-codex.com/static/images/monsters"
+for _monster in MONSTER_DB:
+    _mid = _monster["id"].lower().replace("-", "_")
+    _monster["image_url"] = f"{SPIRE_CODEX_MONSTER_BASE}/{_mid}.webp"
+    _monster["sprite_url"] = f"https://spire-codex.com/static/images/monsters/{_mid}.webp"
+
+
+# 怪物统计
+MONSTER_STATS = {
+    "total": len(MONSTER_DB),
+    "act1": len([m for m in MONSTER_DB if m["act"] == "密林"]),
+    "act2": len([m for m in MONSTER_DB if m["act"] == "巢穴"]),
+    "act3": len([m for m in MONSTER_DB if m["act"] == "荣耀"]),
+    "act4": len([m for m in MONSTER_DB if m["act"] == "暗港"]),
+    "normal": len([m for m in MONSTER_DB if m["type"] == "普通"]),
+    "elite": len([m for m in MONSTER_DB if m["type"] == "精英"]),
+    "boss": len([m for m in MONSTER_DB if m["type"] == "Boss"]),
+}
