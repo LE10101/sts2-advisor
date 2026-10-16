@@ -7,7 +7,7 @@ import os
 import time
 import hashlib
 from datetime import datetime
-from flask import Flask, render_template_string, request, jsonify, Response, session
+from flask import Flask, render_template_string, request, jsonify, Response, session, send_from_directory
 
 from advisor.client import Sts2AgentClient as AutoSpireClient
 from advisor.model import CombatState
@@ -149,6 +149,19 @@ def _get_user_id():
             return user["user_id"]
     return 0
 
+
+# ============ PWA支持 ============
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory("static", "manifest.json", mimetype="application/manifest+json")
+
+@app.route("/service-worker.js")
+def service_worker():
+    return send_from_directory("static", "service-worker.js", mimetype="application/javascript")
+
+@app.route("/static/<path:filename>")
+def static_files(filename):
+    return send_from_directory("static", filename)
 
 # ============ 页面路由 ============
 @app.route("/")
@@ -395,6 +408,13 @@ INDEX_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#1a2a3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="STS2决策器">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="icon" type="image/png" href="/static/icon-192.png">
 <title>STS2 决策器 - 静默猎手AI教练</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -445,6 +465,10 @@ fetch('/api/status').then(r=>r.json()).then(d=>{
   if(d.connected){el.textContent='游戏已连接';el.className='status online';}
   else{el.textContent='游戏未连接';el.className='status offline';}
 });
+// PWA Service Worker 注册
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/service-worker.js').catch(()=>{});
+}
 </script>
 </body>
 </html>"""
