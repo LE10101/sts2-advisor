@@ -1,24 +1,28 @@
 """
-云端数据库存储模块
-SQLite数据库，存储历史对局、实时状态、用户配置、自我优化数据
+云端SQLite数据库模块
+存储历史对局、实时状态、配置、优化记录
+支持多用户隔离 + GitHub持久化（防止云端重启丢失数据）
 """
 import sqlite3
 import json
 import os
 import time
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
-# 数据库路径（云端环境用 /tmp，本地用 ~/.sts2_advisor）
-DB_PATH = os.environ.get(
-    "STS2_DB_PATH",
-    os.path.join(os.path.expanduser("~"), ".sts2_advisor", "sts2_cloud.db")
-)
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+DB_PATH = os.environ.get("STS2_DB_PATH", os.path.join(os.path.expanduser("~"), ".sts2_advisor", "cloud.db"))
+
+# GitHub持久化（可选，配置环境变量后启用）
+try:
+    from advisor.github_storage import get_github_storage
+    _github = get_github_storage()
+except Exception:
+    _github = None
 
 
-def get_db() -> sqlite3.Connection:
+def get_conn():
     """获取数据库连接"""
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
@@ -27,231 +31,277 @@ def get_db() -> sqlite3.Connection:
 
 def init_db():
     """初始化数据库表"""
-    conn = get_db()
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS runs (
-            id TEXT PRIMARY KEY,
-            user_id INTEGER DEFAULT 0,
-            date TEXT,
-            character TEXT,
-            ascension INTEGER,
-            max_floor INTEGER,
-            result TEXT,
-            deck_size INTEGER,
-            relic_count INTEGER,
-            final_hp INTEGER,
-            max_hp INTEGER,
-            data TEXT,
-            created_at REAL
-        );
+    conn = get_conn()
+    c = conn.cursor()
 
-        CREATE TABLE IF NOT EXISTS live_state (
-            user_id INTEGER PRIMARY KEY,
-            screen TEXT,
-            phase TEXT,
-            state_json TEXT,
-            recommendation_json TEXT,
-            updated_at REAL
-        );
+    c.execute("""CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        token TEXT,
+        token_expires INTEGER,
+        steam_id TEXT,
+        steam_name TEXT,
+        avatar_url TEXT,
+        created_at INTEGER
+    )""")
 
-        CREATE TABLE IF NOT EXISTS decisions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER DEFAULT 0,
-            run_id TEXT,
-            floor INTEGER,
-            phase TEXT,
-            action TEXT,
-            reason TEXT,
-            value REAL,
-            created_at REAL
-        );
+    c.execute("""CREATE TABLE IF NOT EXISTS runs (
+        id TEXT PRIMARY KEY,
+        user_id INTEGER DEFAULT 0,
+        date TEXT,
+        character TEXT,
+        ascension INTEGER,
+        max_floor INTEGER,
+        current_hp INTEGER,
+        max_hp INTEGER,
+        gold INTEGER,
+        result TEXT,
+        deck TEXT,
+        relics TEXT,
+        combats TEXT,
+        decisions TEXT,
+        map_path TEXT,
+        seed TEXT,
+        created_at INTEGER
+    )""")
 
-        CREATE TABLE IF NOT EXISTS config (
-            user_id INTEGER DEFAULT 0,
-            key TEXT,
-            value TEXT,
-            updated_at REAL,
-            PRIMARY KEY (user_id, key)
-        );
+    c.execute("""CREATE TABLE IF NOT EXISTS live_state (
+        user_id INTEGER PRIMARY KEY,
+        screen TEXT,
+        phase TEXT,
+        state TEXT,
+        recommendation TEXT,
+        updated_at INTEGER
+    )""")
 
-        CREATE TABLE IF NOT EXISTS optimizations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER DEFAULT 0,
-            type TEXT,
-            description TEXT,
-            data TEXT,
-            created_at REAL
-        );
+    c.execute("""CREATE TABLE IF NOT EXISTS decisions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER DEFAULT 0,
+        run_id TEXT,
+        floor INTEGER,
+        phase TEXT,
+        action TEXT,
+        reason TEXT,
+        value REAL,
+        created_at INTEGER
+    )""")
 
-        CREATE INDEX IF NOT EXISTS idx_runs_user ON runs(user_id, created_at DESC);
-        CREATE INDEX IF NOT EXISTS idx_decisions_user ON decisions(user_id, run_id);
-    """)
+    c.execute("""CREATE TABLE IF NOT EXISTS optimizations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER DEFAULT 0,
+        type TEXT,
+        description TEXT,
+        data TEXT,
+        created_at INTEGER
+    )""")
+
+    c.execute("""CREATE TABLE IF NOT EXISTS config (
+        key TEXT PRIMARY KEY,
+        value TEXT,
+        updated_at INTEGER
+    )""")
+
+    c.execute("CREATE INDEX IF NOT EXISTS idx_runs_user ON runs(user_id, created_at)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_decisions_user ON decisions(user_id, run_id)")
+
     conn.commit()
     conn.close()
 
 
-# ============ 历史对局 ============
-def save_run(run_data: dict, user_id: int = 0) -> str:
-    """保存一局对局"""
-    run_id = run_data.get("id", datetime.now().strftime("%Y%m%d_%H%M%S"))
-    conn = get_db()
-    conn.execute("""
-        INSERT OR REPLACE INTO runs
-        (id, user_id, date, character, ascension, max_floor, result, deck_size, relic_count, final_hp, max_hp, data, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        run_id, user_id,
-        run_data.get("date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
-        run_data.get("character", "静默猎手"),
-        run_data.get("ascension", 0),
-        run_data.get("max_floor", 0),
-        run_data.get("result", "进行中"),
-        len(run_data.get("deck", [])),
-        len(run_data.get("relics", [])),
-        run_data.get("current_hp", 0),
-        run_data.get("max_hp", 70),
-        json.dumps(run_data, ensure_ascii=False),
-        time.time()
-    ))
+# 初始化
+init_db()
+
+
+def save_run(data: dict, user_id: int = 0) -> str:
+    """保存对局数据（同时保存到GitHub持久化）"""
+    conn = get_conn()
+    run_id = data.get("id", f"run_{int(time.time())}")
+    now = int(time.time())
+
+    conn.execute("""INSERT OR REPLACE INTO runs
+        (id, user_id, date, character, ascension, max_floor, current_hp, max_hp, gold, result, deck, relics, combats, decisions, map_path, seed, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (run_id, user_id,
+         data.get("date", datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+         data.get("character", "静默猎手"),
+         data.get("ascension", 0),
+         data.get("max_floor", 0),
+         data.get("current_hp", 70),
+         data.get("max_hp", 70),
+         data.get("gold", 99),
+         data.get("result", "进行中"),
+         json.dumps(data.get("deck", []), ensure_ascii=False),
+         json.dumps(data.get("relics", []), ensure_ascii=False),
+         json.dumps(data.get("combats", []), ensure_ascii=False),
+         json.dumps(data.get("decisions", []), ensure_ascii=False),
+         json.dumps(data.get("map_path", []), ensure_ascii=False),
+         data.get("seed", ""),
+         now))
     conn.commit()
     conn.close()
+
+    # 同时保存到GitHub（异步不阻塞）
+    if _github and _github.enabled:
+        try:
+            full_data = dict(data)
+            full_data["id"] = run_id
+            _github.save_run(full_data, user_id)
+        except Exception as e:
+            print(f"[cloud_db] GitHub保存失败: {e}")
+
     return run_id
 
 
-def list_runs(limit: int = 50, user_id: int = 0) -> list[dict]:
-    """列出历史对局"""
-    conn = get_db()
+def get_run(run_id: str, user_id: int = 0) -> Optional[dict]:
+    """获取对局详情"""
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM runs WHERE id=? AND user_id=?", (run_id, user_id)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    return {
+        "id": row["id"],
+        "date": row["date"],
+        "character": row["character"],
+        "ascension": row["ascension"],
+        "max_floor": row["max_floor"],
+        "current_hp": row["current_hp"],
+        "max_hp": row["max_hp"],
+        "gold": row["gold"],
+        "result": row["result"],
+        "deck": json.loads(row["deck"] or "[]"),
+        "relics": json.loads(row["relics"] or "[]"),
+        "combats": json.loads(row["combats"] or "[]"),
+        "decisions": json.loads(row["decisions"] or "[]"),
+        "map_path": json.loads(row["map_path"] or "[]"),
+        "seed": row["seed"],
+    }
+
+
+def list_runs(limit: int = 50, user_id: int = 0) -> List[dict]:
+    """列出对局列表（数据库为空时自动从GitHub同步）"""
+    conn = get_conn()
     rows = conn.execute(
-        "SELECT * FROM runs WHERE user_id = ? ORDER BY created_at DESC LIMIT ?", (user_id, limit)
+        "SELECT * FROM runs WHERE user_id=? ORDER BY created_at DESC LIMIT ?",
+        (user_id, limit)
     ).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+
+    # 如果数据库为空且GitHub可用，从GitHub同步
+    if not rows and _github and _github.enabled:
+        print(f"[cloud_db] 数据库为空，从GitHub同步用户{user_id}的对局...")
+        try:
+            github_runs = _github.list_runs(user_id)
+            for run_summary in github_runs:
+                run_data = _github.load_run(run_summary["id"], user_id)
+                if run_data:
+                    # 直接保存到数据库（不递归保存到GitHub）
+                    conn = get_conn()
+                    conn.execute("""INSERT OR REPLACE INTO runs
+                        (id, user_id, date, character, ascension, max_floor, current_hp, max_hp, gold, result, deck, relics, combats, decisions, map_path, seed, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (run_data.get("id"), user_id,
+                         run_data.get("date", ""),
+                         run_data.get("character", "静默猎手"),
+                         run_data.get("ascension", 0),
+                         run_data.get("max_floor", 0),
+                         run_data.get("current_hp", 70),
+                         run_data.get("max_hp", 70),
+                         run_data.get("gold", 99),
+                         run_data.get("result", ""),
+                         json.dumps(run_data.get("deck", []), ensure_ascii=False),
+                         json.dumps(run_data.get("relics", []), ensure_ascii=False),
+                         json.dumps(run_data.get("combats", []), ensure_ascii=False),
+                         json.dumps(run_data.get("decisions", []), ensure_ascii=False),
+                         json.dumps(run_data.get("map_path", []), ensure_ascii=False),
+                         run_data.get("seed", ""),
+                         int(time.time())))
+                    conn.commit()
+                    conn.close()
+            # 重新查询
+            conn = get_conn()
+            rows = conn.execute(
+                "SELECT * FROM runs WHERE user_id=? ORDER BY created_at DESC LIMIT ?",
+                (user_id, limit)
+            ).fetchall()
+            conn.close()
+        except Exception as e:
+            print(f"[cloud_db] GitHub同步失败: {e}")
+
+    return [{
+        "id": r["id"],
+        "date": r["date"],
+        "character": r["character"],
+        "ascension": r["ascension"],
+        "floor": r["max_floor"],
+        "result": r["result"],
+        "deck_size": len(json.loads(r["deck"] or "[]")),
+        "relics": len(json.loads(r["relics"] or "[]")),
+    } for r in rows]
 
 
-def get_run(run_id: str, user_id: int = 0) -> Optional[dict]:
-    """获取单局详情"""
-    conn = get_db()
-    row = conn.execute(
-        "SELECT data FROM runs WHERE id = ? AND user_id = ?", (run_id, user_id)
-    ).fetchone()
-    conn.close()
-    if row:
-        return json.loads(row["data"])
-    return None
-
-
-def delete_run(run_id: str) -> bool:
-    """删除一局对局"""
-    conn = get_db()
-    cur = conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
-    conn.commit()
-    conn.close()
-    return cur.rowcount > 0
-
-
-# ============ 实时状态 ============
-def update_live_state(screen: str, phase: str, state: dict, recommendation: dict,
-                      user_id: int = 0):
-    """更新实时状态（云端接收agent推送）"""
-    conn = get_db()
-    conn.execute("""
-        INSERT OR REPLACE INTO live_state (user_id, screen, phase, state_json, recommendation_json, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (user_id, screen, phase, json.dumps(state, ensure_ascii=False),
-          json.dumps(recommendation, ensure_ascii=False), time.time()))
+def update_live_state(screen: str, phase: str, state: dict, recommendation: dict, user_id: int = 0):
+    """更新实时状态"""
+    conn = get_conn()
+    now = int(time.time())
+    conn.execute("""INSERT OR REPLACE INTO live_state (user_id, screen, phase, state, recommendation, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)""",
+        (user_id, screen, phase, json.dumps(state, ensure_ascii=False),
+         json.dumps(recommendation, ensure_ascii=False), now))
     conn.commit()
     conn.close()
 
 
 def get_live_state(user_id: int = 0) -> Optional[dict]:
     """获取实时状态"""
-    conn = get_db()
-    row = conn.execute(
-        "SELECT * FROM live_state WHERE user_id = ?", (user_id,)
-    ).fetchone()
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM live_state WHERE user_id=?", (user_id,)).fetchone()
     conn.close()
-    if row:
-        return {
-            "screen": row["screen"],
-            "phase": row["phase"],
-            "state": json.loads(row["state_json"]),
-            "recommendation": json.loads(row["recommendation_json"]),
-            "updated_at": row["updated_at"],
-            "age_seconds": time.time() - row["updated_at"]
-        }
-    return None
+    if not row:
+        return None
+    now = int(time.time())
+    return {
+        "screen": row["screen"],
+        "phase": row["phase"],
+        "state": json.loads(row["state"] or "{}"),
+        "recommendation": json.loads(row["recommendation"] or "{}"),
+        "updated_at": row["updated_at"],
+        "age_seconds": now - row["updated_at"],
+    }
 
 
-# ============ 决策记录 ============
-def save_decision(run_id: str, floor: int, phase: str, action: str,
-                  reason: str, value: float = 0, user_id: int = 0):
+def save_decision(run_id: str, floor: int, phase: str, action: str, reason: str, value: float, user_id: int = 0):
     """保存决策记录"""
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO decisions (user_id, run_id, floor, phase, action, reason, value, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, (user_id, run_id, floor, phase, action, reason, value, time.time()))
+    conn = get_conn()
+    conn.execute("""INSERT INTO decisions (user_id, run_id, floor, phase, action, reason, value, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (user_id, run_id, floor, phase, action, reason, value, int(time.time())))
     conn.commit()
     conn.close()
 
 
-def get_decisions(run_id: str, user_id: int = 0) -> list[dict]:
-    """获取一局的所有决策"""
-    conn = get_db()
-    rows = conn.execute(
-        "SELECT * FROM decisions WHERE run_id = ? AND user_id = ? ORDER BY created_at",
-        (run_id, user_id)
-    ).fetchall()
-    conn.close()
-    return [dict(r) for r in rows]
-
-
-# ============ 用户配置 ============
-def set_config(key: str, value, user_id: int = 0):
-    """设置配置项"""
-    conn = get_db()
-    conn.execute("""
-        INSERT OR REPLACE INTO config (user_id, key, value, updated_at)
-        VALUES (?, ?, ?, ?)
-    """, (user_id, key, json.dumps(value, ensure_ascii=False), time.time()))
-    conn.commit()
-    conn.close()
-
-
-def get_config(key: str, default=None, user_id: int = 0):
-    """获取配置项"""
-    conn = get_db()
-    row = conn.execute(
-        "SELECT value FROM config WHERE key = ? AND user_id = ?", (key, user_id)
-    ).fetchone()
-    conn.close()
-    if row:
-        return json.loads(row["value"])
-    return default
-
-
-# ============ 自我优化记录 ============
 def save_optimization(opt_type: str, description: str, data: dict, user_id: int = 0):
-    """保存自我优化记录"""
-    conn = get_db()
-    conn.execute("""
-        INSERT INTO optimizations (user_id, type, description, data, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    """, (user_id, opt_type, description, json.dumps(data, ensure_ascii=False), time.time()))
+    """保存优化记录"""
+    conn = get_conn()
+    conn.execute("""INSERT INTO optimizations (user_id, type, description, data, created_at)
+        VALUES (?, ?, ?, ?, ?)""",
+        (user_id, opt_type, description, json.dumps(data, ensure_ascii=False), int(time.time())))
     conn.commit()
     conn.close()
 
 
-def list_optimizations(limit: int = 20, user_id: int = 0) -> list[dict]:
-    """列出自我优化记录"""
-    conn = get_db()
+def list_optimizations(limit: int = 20, user_id: int = 0) -> List[dict]:
+    """列出优化记录"""
+    conn = get_conn()
     rows = conn.execute(
-        "SELECT * FROM optimizations WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+        "SELECT * FROM optimizations WHERE user_id=? ORDER BY created_at DESC LIMIT ?",
         (user_id, limit)
     ).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
-
-
-# 初始化数据库
-init_db()
+    return [{
+        "type": r["type"],
+        "description": r["description"],
+        "data": json.loads(r["data"] or "{}"),
+        "created_at": r["created_at"],
+    } for r in rows]
