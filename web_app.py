@@ -1000,6 +1000,7 @@ body{font-family:-apple-system,sans-serif;background:#0f1923;color:#e0e6ed;}
     <button class="filter-btn" data-filter="普通">普通</button>
     <button class="filter-btn" data-filter="罕见">罕见</button>
     <button class="filter-btn" data-filter="稀有">稀有</button>
+    <button class="filter-btn" data-filter="古代">古代</button>
     <button class="filter-btn" data-filter="Boss">Boss</button>
   </div>
   <div class="grid" id="grid"></div>
